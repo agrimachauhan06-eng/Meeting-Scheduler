@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Calendar - Meeting Scheduler{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold mb-0">Calendar</h3>
+    <a href="/meetings/new" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New Meeting</a>
+</div>
+
+<div class="bg-white rounded-3 shadow-sm p-3">
+    <div id="calendar"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+        },
+        events: '/api/meetings',
+        editable: false,
+        selectable: true,
+        nowIndicator: true,
+        eventTimeFormat: {
+            hour: '2-digit',
+            minute: '2-digit',
+            meridiem: 'short'
+        },
+        eventClick: function(info) {
+            info.jsEvent.preventDefault();
+            if (info.event.url) {
+                window.location.href = info.event.url;
+            }
+        },
+        eventDidMount: function(info) {
+            var props = info.event.extendedProps;
+            var tooltip = info.event.title;
+            if (props.location) tooltip += '\nLocation: ' + props.location;
+            if (props.organizer) tooltip += '\nOrganizer: ' + props.organizer;
+            if (props.status) tooltip += '\nStatus: ' + props.status;
+            info.el.setAttribute('title', tooltip);
+        },
+        height: 'auto',
+    });
+    calendar.render();
+});
+</script>
+{% endblock %}

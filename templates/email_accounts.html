@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}Email Accounts - Meeting Scheduler{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold mb-0">Email Accounts</h3>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEmailModal">
+        <i class="bi bi-plus-lg"></i> Add Email Account
+    </button>
+</div>
+
+<p class="text-muted mb-4">Manage email accounts to sync meeting invites, send reminders, and receive notifications. Add team member emails so everyone stays in the loop.</p>
+
+{% if accounts %}
+    {% for acc in accounts %}
+    <div class="bg-white rounded-3 shadow-sm p-3 mb-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-envelope-fill text-primary"></i>
+                    <strong>{{ acc.email }}</strong>
+                    {% if acc.is_primary %}
+                    <span class="badge bg-warning text-dark">Primary</span>
+                    {% endif %}
+                    {% if not acc.is_active %}
+                    <span class="badge bg-secondary">Inactive</span>
+                    {% endif %}
+                </div>
+                {% if acc.display_name %}
+                <div class="text-muted small mt-1">{{ acc.display_name }}</div>
+                {% endif %}
+                <div class="small mt-1">
+                    <span class="text-muted">IMAP: {{ acc.imap_host }}</span>
+                    <span class="mx-2">|</span>
+                    <span class="{% if acc.sync_status == 'error' %}text-danger{% else %}text-muted{% endif %}">
+                        Sync: {{ acc.sync_status }}
+                    </span>
+                    {% if acc.last_sync_time %}
+                    <span class="mx-2">|</span>
+                    <span class="text-muted">Last sync: {{ acc.last_sync_time.strftime('%b %d, %I:%M %p') }}</span>
+                    {% endif %}
+                </div>
+                {% if acc.error_message %}
+                <div class="text-danger small mt-1"><i class="bi bi-exclamation-triangle"></i> {{ acc.error_message }}</div>
+                {% endif %}
+            </div>
+            <div class="d-flex gap-2">
+                <form method="POST" action="/settings/emails/{{ acc.id }}/toggle">
+                    <button type="submit" class="btn btn-sm btn-outline-{{ 'warning' if acc.is_active else 'success' }}" title="{{ 'Deactivate' if acc.is_active else 'Activate' }}">
+                        <i class="bi bi-{{ 'pause' if acc.is_active else 'play' }}"></i>
+                    </button>
+                </form>
+                {% if not acc.is_primary %}
+                <form method="POST" action="/settings/emails/{{ acc.id }}/set-primary">
+                    <button type="submit" class="btn btn-sm btn-outline-primary" title="Set as Primary">
+                        <i class="bi bi-star"></i>
+                    </button>
+                </form>
+                <form method="POST" action="/settings/emails/{{ acc.id }}/delete" onsubmit="return confirm('Remove this email account?')">
+                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Remove">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </form>
+                {% endif %}
+                <form method="POST" action="/api/sync-email-account/{{ acc.id }}">
+                    <button type="submit" class="btn btn-sm btn-outline-info" title="Sync Now">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+    <div class="text-muted text-center py-5">
+        <i class="bi bi-envelope-x" style="font-size: 3rem;"></i>
+        <p class="mt-2">No email accounts configured yet.</p>
+        <button class="btn btn-primary mt-2" data-bs-toggle="modal" data-bs-target="#addEmailModal">
+            Add your first email account
+        </button>
+    </div>
+{% endif %}
+
+<!-- Add Email Modal -->
+<div class="modal fade" id="addEmailModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="/settings/emails/add">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Email Account</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Display Name</label>
+                        <input type="text" name="display_name" class="form-control" placeholder="e.g., John Doe">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email Address *</label>
+                        <input type="email" name="email" class="form-control" required placeholder="e.g., john@company.com">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">App Password *</label>
+                        <input type="password" name="password" class="form-control" required placeholder="Gmail App Password">
+                        <div class="form-text">For Gmail, use an App Password (not your regular password). Generate one at Google Account > Security > App Passwords.</div>
+                    </div>
+                    <hr>
+                    <p class="text-muted small">Advanced Settings (defaults work for Gmail)</p>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label class="form-label">IMAP Host</label>
+                                <input type="text" name="imap_host" class="form-control" value="imap.gmail.com">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">IMAP Port</label>
+                                <input type="number" name="imap_port" class="form-control" value="993">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label class="form-label">SMTP Host</label>
+                                <input type="text" name="smtp_host" class="form-control" value="smtp.gmail.com">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">SMTP Port</label>
+                                <input type="number" name="smtp_port" class="form-control" value="587">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input type="checkbox" name="sync_enabled" class="form-check-input" checked>
+                        <label class="form-check-label">Enable email sync (pull meeting invites)</label>
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" name="notify_enabled" class="form-check-input" checked>
+                        <label class="form-check-label">Send reminder notifications to this email</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Account</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

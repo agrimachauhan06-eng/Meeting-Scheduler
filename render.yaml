@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: meeting-scheduler
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn -w 2 -b 0.0.0.0:$PORT "wsgi:app"
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true

@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}All Meetings - Meeting Scheduler{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold mb-0">All Meetings</h3>
+    <a href="/meetings/new" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New Meeting</a>
+</div>
+
+<div class="bg-white rounded-3 shadow-sm p-3 mb-3">
+    <form method="GET" class="row g-2 align-items-end">
+        <div class="col-md-5">
+            <input type="text" name="search" class="form-control" placeholder="Search meetings..." value="{{ search }}">
+        </div>
+        <div class="col-md-3">
+            <select name="status" class="form-select">
+                <option value="all" {% if status == 'all' %}selected{% endif %}>All Status</option>
+                <option value="scheduled" {% if status == 'scheduled' %}selected{% endif %}>Scheduled</option>
+                <option value="in_progress" {% if status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                <option value="completed" {% if status == 'completed' %}selected{% endif %}>Completed</option>
+                <option value="cancelled" {% if status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-outline-primary w-100">Filter</button>
+        </div>
+    </form>
+</div>
+
+{% if meetings.items %}
+    {% for m in meetings.items %}
+    <div class="meeting-card priority-{{ m.priority }} {% if m.status == 'cancelled' %}cancelled{% endif %}">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <a href="/meetings/{{ m.id }}" class="fw-bold text-decoration-none text-dark">{{ m.title }}</a>
+                <div class="text-muted small mt-1">
+                    <i class="bi bi-calendar"></i> {{ m.start_time.strftime('%b %d, %Y') }}
+                    <i class="bi bi-clock ms-2"></i> {{ m.start_time.strftime('%I:%M %p') }} - {{ m.end_time.strftime('%I:%M %p') }}
+                </div>
+                <div class="small mt-1">
+                    {% if m.organizer %}<span class="text-muted"><i class="bi bi-person"></i> {{ m.organizer }}</span>{% endif %}
+                    {% if m.location %}<span class="text-muted ms-2"><i class="bi bi-geo-alt"></i> {{ m.location }}</span>{% endif %}
+                    {% if m.source != 'manual' %}<span class="badge bg-info ms-2">{{ m.source }}</span>{% endif %}
+                </div>
+            </div>
+            <div class="d-flex gap-2 align-items-center">
+                <span class="badge bg-{{ 'success' if m.status == 'scheduled' else 'warning' if m.status == 'in_progress' else 'secondary' }}">{{ m.status }}</span>
+                {% if m.status == 'scheduled' %}
+                <form method="POST" action="/meetings/{{ m.id }}/cancel" class="d-inline">
+                    <button type="submit" class="btn btn-sm btn-outline-warning" title="Cancel"><i class="bi bi-x-circle"></i></button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    {% if meetings.pages > 1 %}
+    <nav class="mt-3">
+        <ul class="pagination justify-content-center">
+            {% for p in meetings.iter_pages() %}
+                {% if p %}
+                <li class="page-item {% if p == meetings.page %}active{% endif %}">
+                    <a class="page-link" href="?page={{ p }}&status={{ status }}&search={{ search }}">{{ p }}</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+            {% endfor %}
+        </ul>
+    </nav>
+    {% endif %}
+{% else %}
+    <div class="text-muted text-center py-5">
+        <i class="bi bi-calendar-x" style="font-size: 3rem;"></i>
+        <p class="mt-2">No meetings found.</p>
+        <a href="/meetings/new" class="btn btn-primary mt-2">Create your first meeting</a>
+    </div>
+{% endif %}
+{% endblock %}

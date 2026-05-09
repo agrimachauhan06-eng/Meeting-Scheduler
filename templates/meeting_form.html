@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}New Meeting - Meeting Scheduler{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h3 class="fw-bold">Create New Meeting</h3>
+</div>
+
+<div class="bg-white rounded-3 shadow-sm p-4" style="max-width: 700px;">
+    <form method="POST">
+        <div class="mb-3">
+            <label class="form-label fw-semibold">Title *</label>
+            <input type="text" name="title" class="form-control" required placeholder="e.g., Sprint Planning">
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label class="form-label fw-semibold">Start Time *</label>
+                <input type="datetime-local" name="start_time" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-semibold">End Time *</label>
+                <input type="datetime-local" name="end_time" class="form-control" required>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label fw-semibold">Description</label>
+            <textarea name="description" class="form-control" rows="3" placeholder="Meeting agenda or notes..."></textarea>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label class="form-label fw-semibold">Location</label>
+                <input type="text" name="location" class="form-control" placeholder="e.g., Conference Room A">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-semibold">Meeting Link</label>
+                <input type="url" name="meeting_link" class="form-control" placeholder="e.g., https://zoom.us/j/...">
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label class="form-label fw-semibold">Priority</label>
+                <select name="priority" class="form-select">
+                    <option value="low">Low</option>
+                    <option value="normal" selected>Normal</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-semibold">Reminders (minutes before)</label>
+                <input type="text" name="reminder_minutes" class="form-control" value="15,5" placeholder="e.g., 30,15,5">
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label fw-semibold">Attendees (comma-separated emails)</label>
+            <input type="text" name="attendees" class="form-control" placeholder="e.g., alice@company.com, bob@company.com">
+        </div>
+
+        <div class="mb-4">
+            <label class="form-label fw-semibold">Tags (comma-separated)</label>
+            <input type="text" name="tags" class="form-control" placeholder="e.g., standup, engineering, weekly">
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Create Meeting</button>
+            <a href="/" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

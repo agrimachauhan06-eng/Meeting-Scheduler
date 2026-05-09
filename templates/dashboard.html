@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - Meeting Scheduler{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold mb-0">Dashboard</h3>
+    <a href="/meetings/new" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New Meeting</a>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-number">{{ stats.today }}</div>
+            <div class="stat-label">Today's Meetings</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-number">{{ stats.this_week }}</div>
+            <div class="stat-label">This Week</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-number">{{ stats.total }}</div>
+            <div class="stat-label">Total Meetings</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-number text-muted">{{ stats.cancelled }}</div>
+            <div class="stat-label">Cancelled</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <h5 class="fw-bold mb-3"><i class="bi bi-clock"></i> Today's Schedule</h5>
+        {% if todays %}
+            {% for m in todays %}
+            <a href="/meetings/{{ m.id }}" class="text-decoration-none">
+                <div class="meeting-card priority-{{ m.priority }} {% if m.status == 'cancelled' %}cancelled{% endif %}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <strong class="text-dark">{{ m.title }}</strong>
+                            <div class="text-muted small mt-1">
+                                <i class="bi bi-clock"></i>
+                                {{ m.start_time.strftime('%I:%M %p') }} - {{ m.end_time.strftime('%I:%M %p') }}
+                            </div>
+                            {% if m.location %}
+                            <div class="text-muted small"><i class="bi bi-geo-alt"></i> {{ m.location }}</div>
+                            {% endif %}
+                        </div>
+                        <span class="badge-status bg-{{ 'success' if m.status == 'scheduled' else 'warning' if m.status == 'in_progress' else 'secondary' }}">
+                            {{ m.status }}
+                        </span>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        {% else %}
+            <div class="text-muted text-center py-4">
+                <i class="bi bi-calendar-check" style="font-size: 2rem;"></i>
+                <p class="mt-2">No meetings scheduled for today.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="col-lg-6">
+        <h5 class="fw-bold mb-3"><i class="bi bi-arrow-right-circle"></i> Upcoming (Next 48h)</h5>
+        {% if upcoming %}
+            {% for m in upcoming %}
+            <a href="/meetings/{{ m.id }}" class="text-decoration-none">
+                <div class="meeting-card priority-{{ m.priority }} {% if m.status == 'cancelled' %}cancelled{% endif %}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <strong class="text-dark">{{ m.title }}</strong>
+                            <div class="text-muted small mt-1">
+                                <i class="bi bi-calendar"></i>
+                                {{ m.start_time.strftime('%b %d, %I:%M %p') }}
+                            </div>
+                            {% if m.organizer %}
+                            <div class="text-muted small"><i class="bi bi-person"></i> {{ m.organizer }}</div>
+                            {% endif %}
+                        </div>
+                        <span class="badge badge-status bg-{{ 'danger' if m.priority == 'critical' else 'warning' if m.priority == 'high' else 'primary' if m.priority == 'normal' else 'secondary' }}">
+                            {{ m.priority }}
+                        </span>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        {% else %}
+            <div class="text-muted text-center py-4">
+                <i class="bi bi-emoji-smile" style="font-size: 2rem;"></i>
+                <p class="mt-2">No upcoming meetings in the next 48 hours.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
