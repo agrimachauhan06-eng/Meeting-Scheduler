@@ -23,6 +23,7 @@ def require_api_key(f):
 
 @main_bp.route("/")
 def dashboard():
+    MeetingManager.auto_complete_past_meetings()
     stats = MeetingManager.get_meeting_stats()
     upcoming = MeetingManager.get_upcoming_meetings(hours=48)
     todays = MeetingManager.get_todays_meetings()
@@ -38,6 +39,7 @@ def calendar_view():
 
 @main_bp.route("/meetings")
 def meetings_list():
+    MeetingManager.auto_complete_past_meetings()
     page = request.args.get("page", 1, type=int)
     status = request.args.get("status", "all")
     search = request.args.get("search", "")
@@ -155,6 +157,7 @@ def delete_meeting(meeting_id):
 
 @main_bp.route("/api/meetings")
 def api_meetings():
+    MeetingManager.auto_complete_past_meetings()
     start = request.args.get("start")
     end = request.args.get("end")
 

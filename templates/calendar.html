@@ -1,13 +1,26 @@
 {% extends "base.html" %}
-{% block title %}Calendar - Meeting Scheduler{% endblock %}
+{% block title %}Calendar — Nexus{% endblock %}
+
+{% block extra_css %}
+<style>
+    .fc-theme-standard td, .fc-theme-standard th { border-color: var(--border) !important; }
+    .fc-theme-standard .fc-scrollgrid { border-color: var(--border) !important; }
+    .fc .fc-daygrid-day { background: transparent !important; }
+    .fc .fc-col-header-cell { background: var(--bg-2) !important; }
+    .fc .fc-list-event:hover td { background: var(--bg-card-hover) !important; }
+    .fc .fc-list-day-cushion { background: var(--bg-2) !important; }
+    .fc .fc-list-event td { border-color: var(--border) !important; color: var(--text) !important; }
+    .fc .fc-list-empty { background: var(--bg-card) !important; color: var(--text-muted) !important; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="fw-bold mb-0">Calendar</h3>
-    <a href="/meetings/new" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New Meeting</a>
+<div class="page-header">
+    <div class="page-title">Calendar</div>
+    <a href="/meetings/new" class="btn-nexus"><i class="bi bi-plus-lg"></i> New Meeting</a>
 </div>
 
-<div class="bg-white rounded-3 shadow-sm p-3">
+<div class="card-glass p-3">
     <div id="calendar"></div>
 </div>
 {% endblock %}
@@ -27,23 +40,16 @@ document.addEventListener('DOMContentLoaded', function() {
         editable: false,
         selectable: true,
         nowIndicator: true,
-        eventTimeFormat: {
-            hour: '2-digit',
-            minute: '2-digit',
-            meridiem: 'short'
-        },
+        eventTimeFormat: { hour: '2-digit', minute: '2-digit', meridiem: 'short' },
         eventClick: function(info) {
             info.jsEvent.preventDefault();
-            if (info.event.url) {
-                window.location.href = info.event.url;
-            }
+            if (info.event.url) window.location.href = info.event.url;
         },
         eventDidMount: function(info) {
             var props = info.event.extendedProps;
             var tooltip = info.event.title;
-            if (props.location) tooltip += '\nLocation: ' + props.location;
-            if (props.organizer) tooltip += '\nOrganizer: ' + props.organizer;
-            if (props.status) tooltip += '\nStatus: ' + props.status;
+            if (props.location) tooltip += '\n📍 ' + props.location;
+            if (props.status)   tooltip += '\n● ' + props.status;
             info.el.setAttribute('title', tooltip);
         },
         height: 'auto',

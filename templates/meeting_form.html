@@ -1,48 +1,58 @@
 {% extends "base.html" %}
-{% block title %}New Meeting - Meeting Scheduler{% endblock %}
+{% block title %}New Meeting — Nexus{% endblock %}
 
 {% block content %}
-<div class="mb-4">
-    <h3 class="fw-bold">Create New Meeting</h3>
+<div class="page-header">
+    <div>
+        <div class="page-title">New Meeting</div>
+        <div style="font-size:13px; color:var(--text-muted); margin-top:3px;">Fill in the details and we'll handle the rest.</div>
+    </div>
+    <a href="/" class="btn-ghost"><i class="bi bi-arrow-left"></i> Back</a>
 </div>
 
-<div class="bg-white rounded-3 shadow-sm p-4" style="max-width: 700px;">
+<div class="card-glass p-4" style="max-width:680px;">
     <form method="POST">
-        <div class="mb-3">
-            <label class="form-label fw-semibold">Title *</label>
-            <input type="text" name="title" class="form-control" required placeholder="e.g., Sprint Planning">
+
+        <div class="mb-4">
+            <label class="form-label">Meeting Title *</label>
+            <input type="text" name="title" class="form-control" required
+                   placeholder="e.g., Product Roadmap Review"
+                   style="font-size:15px; font-weight:500; padding:11px 16px;">
         </div>
 
-        <div class="row mb-3">
-            <div class="col-md-6">
-                <label class="form-label fw-semibold">Start Time *</label>
+        <div class="row mb-4">
+            <div class="col-md-6 mb-3 mb-md-0">
+                <label class="form-label">Start Time *</label>
                 <input type="datetime-local" name="start_time" class="form-control" required>
             </div>
             <div class="col-md-6">
-                <label class="form-label fw-semibold">End Time *</label>
+                <label class="form-label">End Time *</label>
                 <input type="datetime-local" name="end_time" class="form-control" required>
             </div>
         </div>
 
-        <div class="mb-3">
-            <label class="form-label fw-semibold">Description</label>
-            <textarea name="description" class="form-control" rows="3" placeholder="Meeting agenda or notes..."></textarea>
+        <div class="mb-4">
+            <label class="form-label">Description</label>
+            <textarea name="description" class="form-control" rows="3"
+                      placeholder="Agenda, context, or notes…"></textarea>
         </div>
 
-        <div class="row mb-3">
-            <div class="col-md-6">
-                <label class="form-label fw-semibold">Location</label>
-                <input type="text" name="location" class="form-control" placeholder="e.g., Conference Room A">
+        <div class="row mb-4">
+            <div class="col-md-6 mb-3 mb-md-0">
+                <label class="form-label">Location</label>
+                <input type="text" name="location" class="form-control"
+                       placeholder="e.g., Conference Room B">
             </div>
             <div class="col-md-6">
-                <label class="form-label fw-semibold">Meeting Link</label>
-                <input type="url" name="meeting_link" class="form-control" placeholder="e.g., https://zoom.us/j/...">
+                <label class="form-label">Meeting Link</label>
+                <input type="url" name="meeting_link" class="form-control"
+                       placeholder="https://meet.google.com/…">
             </div>
         </div>
 
-        <div class="row mb-3">
-            <div class="col-md-6">
-                <label class="form-label fw-semibold">Priority</label>
+        <div class="row mb-4">
+            <div class="col-md-6 mb-3 mb-md-0">
+                <label class="form-label">Priority</label>
                 <select name="priority" class="form-select">
                     <option value="low">Low</option>
                     <option value="normal" selected>Normal</option>
@@ -51,25 +61,33 @@
                 </select>
             </div>
             <div class="col-md-6">
-                <label class="form-label fw-semibold">Reminders (minutes before)</label>
-                <input type="text" name="reminder_minutes" class="form-control" value="15,5" placeholder="e.g., 30,15,5">
+                <label class="form-label">Reminders <span style="color:var(--text-muted); font-weight:400;">(minutes before)</span></label>
+                <input type="text" name="reminder_minutes" class="form-control"
+                       value="15,5" placeholder="e.g., 30,15,5">
             </div>
         </div>
 
-        <div class="mb-3">
-            <label class="form-label fw-semibold">Attendees (comma-separated emails)</label>
-            <input type="text" name="attendees" class="form-control" placeholder="e.g., alice@company.com, bob@company.com">
+        <div class="mb-4">
+            <label class="form-label">Attendees <span style="color:var(--text-muted); font-weight:400;">(comma-separated emails)</span></label>
+            <input type="text" name="attendees" class="form-control"
+                   placeholder="alice@company.com, bob@company.com">
         </div>
 
         <div class="mb-4">
-            <label class="form-label fw-semibold">Tags (comma-separated)</label>
-            <input type="text" name="tags" class="form-control" placeholder="e.g., standup, engineering, weekly">
+            <label class="form-label">Tags <span style="color:var(--text-muted); font-weight:400;">(comma-separated)</span></label>
+            <input type="text" name="tags" class="form-control"
+                   placeholder="design, q2, product">
         </div>
 
-        <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Create Meeting</button>
-            <a href="/" class="btn btn-outline-secondary">Cancel</a>
+        <hr class="nexus-divider">
+
+        <div style="display:flex; gap:10px;">
+            <button type="submit" class="btn-nexus">
+                <i class="bi bi-check-lg"></i> Create Meeting
+            </button>
+            <a href="/" class="btn-ghost">Cancel</a>
         </div>
+
     </form>
 </div>
 {% endblock %}

@@ -170,6 +170,16 @@ class MeetingManager:
         )
 
     @staticmethod
+    def auto_complete_past_meetings():
+        now = datetime.utcnow()
+        updated = Meeting.query.filter(
+            Meeting.end_time < now,
+            Meeting.status.in_(["scheduled", "in_progress"]),
+        ).update({"status": "completed"}, synchronize_session=False)
+        if updated:
+            db.session.commit()
+
+    @staticmethod
     def cancel_meeting(meeting_id):
         return MeetingManager.update_meeting(meeting_id, status="cancelled")
 

@@ -1,151 +1,155 @@
 {% extends "base.html" %}
-{% block title %}Email Accounts - Meeting Scheduler{% endblock %}
+{% block title %}Email Accounts — Nexus{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="fw-bold mb-0">Email Accounts</h3>
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEmailModal">
-        <i class="bi bi-plus-lg"></i> Add Email Account
+<div class="page-header">
+    <div>
+        <div class="page-title">Email Accounts</div>
+        <div style="font-size:13px; color:var(--text-muted); margin-top:3px;">Sync meeting invites, send reminders, keep everyone in the loop.</div>
+    </div>
+    <button class="btn-nexus" data-bs-toggle="modal" data-bs-target="#addEmailModal">
+        <i class="bi bi-plus-lg"></i> Add Account
     </button>
 </div>
 
-<p class="text-muted mb-4">Manage email accounts to sync meeting invites, send reminders, and receive notifications. Add team member emails so everyone stays in the loop.</p>
-
 {% if accounts %}
     {% for acc in accounts %}
-    <div class="bg-white rounded-3 shadow-sm p-3 mb-3">
-        <div class="d-flex justify-content-between align-items-center">
-            <div>
-                <div class="d-flex align-items-center gap-2">
-                    <i class="bi bi-envelope-fill text-primary"></i>
-                    <strong>{{ acc.email }}</strong>
-                    {% if acc.is_primary %}
-                    <span class="badge bg-warning text-dark">Primary</span>
+    <div class="card-glass p-4 mb-3">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; gap:14px;">
+                <div style="width:42px; height:42px; border-radius:12px; background:var(--primary-dim); border:1px solid rgba(124,58,237,0.2); display:flex; align-items:center; justify-content:center; font-size:18px; color:#a78bfa; flex-shrink:0;">
+                    <i class="bi bi-envelope-fill"></i>
+                </div>
+                <div>
+                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                        <span style="font-size:14px; font-weight:600; color:var(--text);">{{ acc.email }}</span>
+                        {% if acc.is_primary %}
+                        <span style="font-size:10px; font-weight:700; letter-spacing:0.5px; background:rgba(245,158,11,0.15); color:var(--orange); border:1px solid rgba(245,158,11,0.25); border-radius:20px; padding:2px 9px;">PRIMARY</span>
+                        {% endif %}
+                        {% if not acc.is_active %}
+                        <span style="font-size:10px; font-weight:700; background:rgba(100,116,139,0.15); color:var(--text-muted); border:1px solid rgba(100,116,139,0.2); border-radius:20px; padding:2px 9px;">INACTIVE</span>
+                        {% endif %}
+                    </div>
+                    {% if acc.display_name %}
+                    <div style="font-size:12.5px; color:var(--text-muted); margin-top:2px;">{{ acc.display_name }}</div>
                     {% endif %}
-                    {% if not acc.is_active %}
-                    <span class="badge bg-secondary">Inactive</span>
+                    <div style="font-size:12px; color:var(--text-muted); margin-top:4px; display:flex; gap:14px; flex-wrap:wrap;">
+                        <span><i class="bi bi-server" style="margin-right:3px;"></i>{{ acc.imap_host }}</span>
+                        <span style="color:{{ 'var(--red)' if acc.sync_status == 'error' else 'var(--text-muted)' }};">
+                            <i class="bi bi-circle-fill" style="font-size:7px; margin-right:4px;"></i>{{ acc.sync_status | title }}
+                        </span>
+                        {% if acc.last_sync_time %}
+                        <span>Last sync: {{ acc.last_sync_time.strftime('%b %d, %I:%M %p') }}</span>
+                        {% endif %}
+                    </div>
+                    {% if acc.error_message %}
+                    <div style="font-size:12px; color:var(--red); margin-top:4px;">
+                        <i class="bi bi-exclamation-triangle-fill"></i> {{ acc.error_message }}
+                    </div>
                     {% endif %}
                 </div>
-                {% if acc.display_name %}
-                <div class="text-muted small mt-1">{{ acc.display_name }}</div>
-                {% endif %}
-                <div class="small mt-1">
-                    <span class="text-muted">IMAP: {{ acc.imap_host }}</span>
-                    <span class="mx-2">|</span>
-                    <span class="{% if acc.sync_status == 'error' %}text-danger{% else %}text-muted{% endif %}">
-                        Sync: {{ acc.sync_status }}
-                    </span>
-                    {% if acc.last_sync_time %}
-                    <span class="mx-2">|</span>
-                    <span class="text-muted">Last sync: {{ acc.last_sync_time.strftime('%b %d, %I:%M %p') }}</span>
-                    {% endif %}
-                </div>
-                {% if acc.error_message %}
-                <div class="text-danger small mt-1"><i class="bi bi-exclamation-triangle"></i> {{ acc.error_message }}</div>
-                {% endif %}
             </div>
-            <div class="d-flex gap-2">
-                <form method="POST" action="/settings/emails/{{ acc.id }}/toggle">
-                    <button type="submit" class="btn btn-sm btn-outline-{{ 'warning' if acc.is_active else 'success' }}" title="{{ 'Deactivate' if acc.is_active else 'Activate' }}">
-                        <i class="bi bi-{{ 'pause' if acc.is_active else 'play' }}"></i>
+
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                <form method="POST" action="/api/sync-email-account/{{ acc.id }}" style="margin:0;">
+                    <button type="submit" class="btn-ghost" style="padding:7px 12px; font-size:12px;" title="Sync Now">
+                        <i class="bi bi-arrow-clockwise"></i> Sync
+                    </button>
+                </form>
+                <form method="POST" action="/settings/emails/{{ acc.id }}/toggle" style="margin:0;">
+                    <button type="submit" class="btn-ghost" style="padding:7px 12px; font-size:12px;" title="{{ 'Deactivate' if acc.is_active else 'Activate' }}">
+                        <i class="bi bi-{{ 'pause-fill' if acc.is_active else 'play-fill' }}"></i>
                     </button>
                 </form>
                 {% if not acc.is_primary %}
-                <form method="POST" action="/settings/emails/{{ acc.id }}/set-primary">
-                    <button type="submit" class="btn btn-sm btn-outline-primary" title="Set as Primary">
-                        <i class="bi bi-star"></i>
+                <form method="POST" action="/settings/emails/{{ acc.id }}/set-primary" style="margin:0;">
+                    <button type="submit" class="btn-ghost" style="padding:7px 12px; font-size:12px;" title="Set as Primary">
+                        <i class="bi bi-star-fill" style="color:var(--orange);"></i>
                     </button>
                 </form>
-                <form method="POST" action="/settings/emails/{{ acc.id }}/delete" onsubmit="return confirm('Remove this email account?')">
-                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Remove">
+                <form method="POST" action="/settings/emails/{{ acc.id }}/delete" style="margin:0;"
+                      onsubmit="return confirm('Remove this email account?')">
+                    <button type="submit" class="btn-danger-ghost" style="padding:7px 12px; font-size:12px;" title="Remove">
                         <i class="bi bi-trash"></i>
                     </button>
                 </form>
                 {% endif %}
-                <form method="POST" action="/api/sync-email-account/{{ acc.id }}">
-                    <button type="submit" class="btn btn-sm btn-outline-info" title="Sync Now">
-                        <i class="bi bi-arrow-clockwise"></i>
-                    </button>
-                </form>
             </div>
         </div>
     </div>
     {% endfor %}
 {% else %}
-    <div class="text-muted text-center py-5">
-        <i class="bi bi-envelope-x" style="font-size: 3rem;"></i>
-        <p class="mt-2">No email accounts configured yet.</p>
-        <button class="btn btn-primary mt-2" data-bs-toggle="modal" data-bs-target="#addEmailModal">
-            Add your first email account
+    <div class="empty-state">
+        <i class="bi bi-envelope-x empty-state-icon"></i>
+        <div class="empty-state-text">No email accounts configured yet.<br>Add one to sync meeting invites automatically.</div>
+        <button class="btn-nexus" data-bs-toggle="modal" data-bs-target="#addEmailModal">
+            Add your first account
         </button>
     </div>
 {% endif %}
 
 <!-- Add Email Modal -->
 <div class="modal fade" id="addEmailModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <form method="POST" action="/settings/emails/add">
                 <div class="modal-header">
                     <h5 class="modal-title">Add Email Account</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body" style="padding:22px;">
                     <div class="mb-3">
                         <label class="form-label">Display Name</label>
-                        <input type="text" name="display_name" class="form-control" placeholder="e.g., John Doe">
+                        <input type="text" name="display_name" class="form-control" placeholder="e.g., Agrim Singh">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Email Address *</label>
-                        <input type="email" name="email" class="form-control" required placeholder="e.g., john@company.com">
+                        <input type="email" name="email" class="form-control" required placeholder="you@company.com">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">App Password *</label>
                         <input type="password" name="password" class="form-control" required placeholder="Gmail App Password">
-                        <div class="form-text">For Gmail, use an App Password (not your regular password). Generate one at Google Account > Security > App Passwords.</div>
+                        <div style="font-size:11.5px; color:var(--text-muted); margin-top:6px; line-height:1.5;">
+                            Use a Gmail App Password — not your regular password.<br>
+                            Generate at: <span style="color:var(--cyan);">Google Account → Security → App Passwords</span>
+                        </div>
                     </div>
-                    <hr>
-                    <p class="text-muted small">Advanced Settings (defaults work for Gmail)</p>
+                    <hr class="nexus-divider">
+                    <div style="font-size:12px; color:var(--text-muted); margin-bottom:14px; font-weight:600; letter-spacing:0.5px; text-transform:uppercase;">Advanced (defaults work for Gmail)</div>
                     <div class="row">
-                        <div class="col-md-8">
-                            <div class="mb-3">
-                                <label class="form-label">IMAP Host</label>
-                                <input type="text" name="imap_host" class="form-control" value="imap.gmail.com">
-                            </div>
+                        <div class="col-8 mb-3">
+                            <label class="form-label">IMAP Host</label>
+                            <input type="text" name="imap_host" class="form-control" value="imap.gmail.com">
                         </div>
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label class="form-label">IMAP Port</label>
-                                <input type="number" name="imap_port" class="form-control" value="993">
-                            </div>
+                        <div class="col-4 mb-3">
+                            <label class="form-label">Port</label>
+                            <input type="number" name="imap_port" class="form-control" value="993">
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col-md-8">
-                            <div class="mb-3">
-                                <label class="form-label">SMTP Host</label>
-                                <input type="text" name="smtp_host" class="form-control" value="smtp.gmail.com">
-                            </div>
+                        <div class="col-8 mb-3">
+                            <label class="form-label">SMTP Host</label>
+                            <input type="text" name="smtp_host" class="form-control" value="smtp.gmail.com">
                         </div>
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label class="form-label">SMTP Port</label>
-                                <input type="number" name="smtp_port" class="form-control" value="587">
-                            </div>
+                        <div class="col-4 mb-3">
+                            <label class="form-label">Port</label>
+                            <input type="number" name="smtp_port" class="form-control" value="587">
                         </div>
                     </div>
-                    <div class="form-check mb-3">
-                        <input type="checkbox" name="sync_enabled" class="form-check-input" checked>
-                        <label class="form-check-label">Enable email sync (pull meeting invites)</label>
-                    </div>
-                    <div class="form-check">
-                        <input type="checkbox" name="notify_enabled" class="form-check-input" checked>
-                        <label class="form-check-label">Send reminder notifications to this email</label>
+                    <div style="display:flex; flex-direction:column; gap:10px;">
+                        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:13px; color:var(--text);">
+                            <input type="checkbox" name="sync_enabled" checked style="accent-color:var(--primary); width:15px; height:15px;">
+                            Enable email sync (pull meeting invites from inbox)
+                        </label>
+                        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:13px; color:var(--text);">
+                            <input type="checkbox" name="notify_enabled" checked style="accent-color:var(--primary); width:15px; height:15px;">
+                            Send reminders from this account
+                        </label>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Add Account</button>
+                <div class="modal-footer" style="padding:16px 22px; gap:10px;">
+                    <button type="button" class="btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn-nexus">Add Account</button>
                 </div>
             </form>
         </div>
