@@ -1,4 +1,6 @@
+import os
 from datetime import datetime, timedelta
+from functools import wraps
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
 
 from app import db
@@ -7,6 +9,16 @@ from app.meeting_manager import MeetingManager
 from app.invite_service import InviteService
 
 main_bp = Blueprint("main", __name__)
+
+
+def require_api_key(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        key = request.headers.get("X-API-Key") or request.args.get("api_key")
+        if not key or key != os.getenv("API_KEY", ""):
+            return jsonify({"error": "Unauthorized"}), 401
+        return f(*args, **kwargs)
+    return decorated
 
 
 @main_bp.route("/")
@@ -186,6 +198,7 @@ def api_meetings():
 
 
 @main_bp.route("/api/meetings", methods=["POST"])
+@require_api_key
 def api_create_meeting():
     data = request.get_json()
     if not data:
