@@ -4,6 +4,7 @@ from flask import Blueprint, render_template, request, jsonify, redirect, url_fo
 from app import db
 from app.models import Meeting, Reminder, EmailAccount
 from app.meeting_manager import MeetingManager
+from app.invite_service import InviteService
 
 main_bp = Blueprint("main", __name__)
 
@@ -100,6 +101,14 @@ def create_meeting():
 
         if conflicts:
             flash(f"Warning: This meeting conflicts with {len(conflicts)} other meeting(s).", "warning")
+
+        if meeting.attendees:
+            try:
+                sent = InviteService.send_invites(meeting)
+                if sent:
+                    flash(f"Invite sent to {sent} attendee(s).", "info")
+            except Exception as e:
+                flash("Meeting created but invites could not be sent (SMTP not configured).", "warning")
 
         flash(f"Meeting '{title}' created successfully!", "success")
         return redirect(url_for("main.dashboard"))

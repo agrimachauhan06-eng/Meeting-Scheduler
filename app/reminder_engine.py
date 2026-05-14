@@ -77,6 +77,8 @@ class ReminderEngine:
                 try:
                     if reminder.reminder_type in ("email", "both") and self.enable_email:
                         self._send_email_reminder(meeting, reminder)
+                        # Also remind all attendees
+                        self._send_attendee_reminders(meeting, reminder)
 
                     if reminder.reminder_type in ("desktop", "both") and self.enable_desktop:
                         self._send_desktop_notification(meeting, reminder)
@@ -144,6 +146,17 @@ class ReminderEngine:
             server.starttls()
             server.login(smtp_user, smtp_pass)
             server.sendmail(smtp_user, recipients, msg.as_string())
+
+    def _send_attendee_reminders(self, meeting, reminder):
+        if not meeting.attendees:
+            return
+        try:
+            from app.invite_service import InviteService
+            time_until = meeting.start_time - datetime.utcnow()
+            minutes_until = max(0, int(time_until.total_seconds() / 60))
+            InviteService.send_reminder(meeting, minutes_until)
+        except Exception as e:
+            logger.error(f"Failed to send attendee reminders for {meeting.title}: {e}")
 
     def _send_desktop_notification(self, meeting, reminder):
         try:
