@@ -228,6 +228,12 @@ def api_create_meeting():
         tags=data.get("tags"),
     )
 
+    if meeting.attendees:
+        try:
+            InviteService.send_invites(meeting)
+        except Exception:
+            pass
+
     return jsonify(meeting.to_dict()), 201
 
 
