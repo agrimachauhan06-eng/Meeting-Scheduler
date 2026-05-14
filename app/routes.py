@@ -238,6 +238,7 @@ def api_create_meeting():
 
 
 @main_bp.route("/api/meetings/<int:meeting_id>", methods=["DELETE"])
+@require_api_key
 def api_delete_meeting(meeting_id):
     if MeetingManager.delete_meeting(meeting_id):
         return jsonify({"message": "Deleted"}), 200
