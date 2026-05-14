@@ -49,9 +49,13 @@
         .meeting-card.priority-critical { border-left-color: #dc3545; }
         .meeting-card.cancelled { opacity: 0.5; border-left-color: #adb5bd; }
         .badge-status {
-            font-size: 0.7rem; padding: 0.25rem 0.5rem;
-            border-radius: 20px; font-weight: 600;
+            font-size: 0.7rem; padding: 0.25rem 0.65rem;
+            border-radius: 20px; font-weight: 600; letter-spacing: 0.03em;
         }
+        .status-scheduled   { background-color: #2B6CB0; color: #FFFFFF; }
+        .status-in_progress { background-color: #DD6B20; color: #FFFFFF; }
+        .status-completed   { background-color: #2F855A; color: #FFFFFF; }
+        .status-cancelled   { background-color: #718096; color: #FFFFFF; }
         .flash-messages { position: fixed; top: 1rem; right: 1rem; z-index: 9999; min-width: 300px; }
         @media (max-width: 768px) {
             .sidebar { transform: translateX(-100%); }

@@ -52,8 +52,8 @@
                             <div class="text-muted small"><i class="bi bi-geo-alt"></i> {{ m.location }}</div>
                             {% endif %}
                         </div>
-                        <span class="badge-status bg-{{ 'success' if m.status == 'scheduled' else 'warning' if m.status == 'in_progress' else 'secondary' }}">
-                            {{ m.status }}
+                        <span class="badge-status status-{{ m.status }}">
+                            {{ m.status | replace('_', ' ') }}
                         </span>
                     </div>
                 </div>

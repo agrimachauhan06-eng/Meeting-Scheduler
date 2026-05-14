@@ -10,8 +10,8 @@
     <div class="d-flex justify-content-between align-items-start mb-3">
         <h3 class="fw-bold mb-0">{{ meeting.title }}</h3>
         <div class="d-flex gap-2">
-            <span class="badge bg-{{ 'success' if meeting.status == 'scheduled' else 'warning' if meeting.status == 'in_progress' else 'danger' if meeting.status == 'cancelled' else 'secondary' }} fs-6">
-                {{ meeting.status }}
+            <span class="badge-status status-{{ meeting.status }}" style="font-size:0.85rem;">
+                {{ meeting.status | replace('_', ' ') }}
             </span>
             <span class="badge bg-{{ 'danger' if meeting.priority == 'critical' else 'warning' if meeting.priority == 'high' else 'primary' if meeting.priority == 'normal' else 'secondary' }} fs-6">
                 {{ meeting.priority }}

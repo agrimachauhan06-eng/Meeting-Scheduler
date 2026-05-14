@@ -44,7 +44,7 @@
                 </div>
             </div>
             <div class="d-flex gap-2 align-items-center">
-                <span class="badge bg-{{ 'success' if m.status == 'scheduled' else 'warning' if m.status == 'in_progress' else 'secondary' }}">{{ m.status }}</span>
+                <span class="badge-status status-{{ m.status }}">{{ m.status | replace('_', ' ') }}</span>
                 {% if m.status == 'scheduled' %}
                 <form method="POST" action="/meetings/{{ m.id }}/cancel" class="d-inline">
                     <button type="submit" class="btn btn-sm btn-outline-warning" title="Cancel"><i class="bi bi-x-circle"></i></button>
