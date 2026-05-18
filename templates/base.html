@@ -588,7 +588,7 @@
             <button class="sync-btn" onclick="copyBookingLink()" id="copyLinkBtn" style="margin-bottom:8px;">
                 <i class="bi bi-link-45deg"></i> Copy Booking Link
             </button>
-            <button class="sync-btn" onclick="syncEmails()">
+            <button class="sync-btn" onclick="syncEmails()" id="syncEmailsBtn">
                 <i class="bi bi-arrow-clockwise"></i> Sync Emails
             </button>
         </div>
@@ -618,32 +618,44 @@
     <script>
         function copyBookingLink() {
             const link = window.location.origin + '/book';
+            const btn = document.getElementById('copyLinkBtn');
             function showCopied() {
-                const btn = document.getElementById('copyLinkBtn');
                 const orig = btn.innerHTML;
                 btn.innerHTML = '<i class="bi bi-check-lg"></i> Copied!';
+                btn.style.background = 'var(--emerald-soft)';
                 btn.style.color = 'var(--emerald)';
-                setTimeout(() => { btn.innerHTML = orig; btn.style.color = ''; }, 2200);
+                btn.style.borderColor = 'rgba(5,150,105,0.25)';
+                setTimeout(() => {
+                    btn.innerHTML = orig;
+                    btn.style.background = '';
+                    btn.style.color = '';
+                    btn.style.borderColor = '';
+                }, 2200);
             }
-            function fallback() {
-                const ta = document.createElement('textarea');
-                ta.value = link;
-                ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0;';
-                document.body.appendChild(ta);
-                ta.focus(); ta.select();
-                try { document.execCommand('copy'); showCopied(); }
-                catch(e) { prompt('Copy this booking link:', link); }
-                document.body.removeChild(ta);
+            // Try modern clipboard API
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(link).then(showCopied).catch(() => {
+                    prompt('Copy this booking link:', link);
+                });
+                return;
             }
-            if (navigator.clipboard && window.isSecureContext) {
-                navigator.clipboard.writeText(link).then(showCopied).catch(fallback);
-            } else {
-                fallback();
-            }
+            // Universal fallback: temp input + execCommand
+            const inp = document.createElement('input');
+            inp.setAttribute('readonly', '');
+            inp.value = link;
+            inp.style.cssText = 'position:absolute;left:-9999px;top:0;';
+            document.body.appendChild(inp);
+            inp.select();
+            inp.setSelectionRange(0, 99999);
+            let ok = false;
+            try { ok = document.execCommand('copy'); } catch(e) {}
+            document.body.removeChild(inp);
+            if (ok) showCopied();
+            else prompt('Copy this booking link:', link);
         }
 
         function syncEmails() {
-            const btn = document.querySelector('.sync-btn');
+            const btn = document.getElementById('syncEmailsBtn');
             const icon = btn.querySelector('i');
             icon.className = 'bi bi-arrow-clockwise spin';
             btn.disabled = true;
