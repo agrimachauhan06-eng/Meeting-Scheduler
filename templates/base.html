@@ -618,13 +618,28 @@
     <script>
         function copyBookingLink() {
             const link = window.location.origin + '/book';
-            navigator.clipboard.writeText(link).then(() => {
+            function showCopied() {
                 const btn = document.getElementById('copyLinkBtn');
                 const orig = btn.innerHTML;
                 btn.innerHTML = '<i class="bi bi-check-lg"></i> Copied!';
                 btn.style.color = 'var(--emerald)';
-                setTimeout(() => { btn.innerHTML = orig; btn.style.color = ''; }, 2000);
-            });
+                setTimeout(() => { btn.innerHTML = orig; btn.style.color = ''; }, 2200);
+            }
+            function fallback() {
+                const ta = document.createElement('textarea');
+                ta.value = link;
+                ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0;';
+                document.body.appendChild(ta);
+                ta.focus(); ta.select();
+                try { document.execCommand('copy'); showCopied(); }
+                catch(e) { prompt('Copy this booking link:', link); }
+                document.body.removeChild(ta);
+            }
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(link).then(showCopied).catch(fallback);
+            } else {
+                fallback();
+            }
         }
 
         function syncEmails() {
