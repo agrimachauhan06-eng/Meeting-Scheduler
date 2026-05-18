@@ -61,7 +61,7 @@
     <div class="greeting-title">Welcome back!</div>
     <div class="greeting-sub">Here's what's happening with your schedule today.</div>
     <div class="greeting-date d-none d-md-block">
-        <span class="day">{% if now is defined %}{{ "{:02d}".format(now.day) }}{% endif %}</span>
+        <span class="day">{% if now is defined %}{{ now.strftime('%d') }}{% endif %}</span>
         {% if now is defined %}{{ now.strftime('%B %Y') }}{% endif %}
     </div>
 </div>
