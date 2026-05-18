@@ -1,105 +1,157 @@
 {% extends "base.html" %}
 {% block title %}Dashboard — Nexus{% endblock %}
 
+{% block extra_css %}
+<style>
+    .greeting-strip {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--violet) 60%, #A855F7 100%);
+        border-radius: var(--r-xl);
+        padding: 28px 32px;
+        margin-bottom: 28px;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 8px 32px var(--primary-glow);
+    }
+    .greeting-strip::before {
+        content: '';
+        position: absolute; top: -60px; right: -60px;
+        width: 220px; height: 220px; border-radius: 50%;
+        background: rgba(255,255,255,0.08);
+    }
+    .greeting-strip::after {
+        content: '';
+        position: absolute; bottom: -40px; right: 80px;
+        width: 140px; height: 140px; border-radius: 50%;
+        background: rgba(255,255,255,0.05);
+    }
+    .greeting-emoji {
+        font-size: 36px; display: block; margin-bottom: 8px;
+        animation: wave 2s ease-in-out infinite;
+    }
+    @keyframes wave {
+        0%, 100% { transform: rotate(0deg); }
+        25% { transform: rotate(-10deg); }
+        75% { transform: rotate(10deg); }
+    }
+    .greeting-title {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 26px; font-weight: 800;
+        color: white; letter-spacing: -0.6px;
+        margin-bottom: 4px;
+    }
+    .greeting-sub { font-size: 13.5px; color: rgba(255,255,255,0.75); font-weight: 400; }
+    .greeting-date {
+        position: absolute; right: 32px; top: 50%; transform: translateY(-50%);
+        text-align: right; color: rgba(255,255,255,0.85);
+        font-size: 13px; font-weight: 500;
+    }
+    .greeting-date .day {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 32px; font-weight: 800; color: white; display: block;
+        line-height: 1; letter-spacing: -1px;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="page-header">
-    <div>
-        <div class="page-title">Good day ✦</div>
-        <div style="font-size:13px; color:var(--text-muted); margin-top:3px;">Here's what's on your plate today.</div>
+
+<!-- Greeting strip -->
+<div class="greeting-strip fade-up">
+    <span class="greeting-emoji">👋</span>
+    <div class="greeting-title">Welcome back!</div>
+    <div class="greeting-sub">Here's what's happening with your schedule today.</div>
+    <div class="greeting-date d-none d-md-block">
+        <span class="day">{{ "{:02d}".format(now.day if now is defined else "") }}</span>
+        {{ now.strftime('%B %Y') if now is defined else "" }}
     </div>
-    <a href="/meetings/new" class="btn-nexus">
-        <i class="bi bi-plus-lg"></i> New Meeting
-    </a>
 </div>
 
 <!-- Stat cards -->
 <div class="row g-3 mb-4">
-    <div class="col-6 col-lg-3">
-        <div class="stat-card sc-purple">
-            <div class="stat-icon si-purple"><i class="bi bi-calendar-day-fill"></i></div>
-            <div class="stat-number">{{ stats.today }}</div>
-            <div class="stat-label">Today's Meetings</div>
+    <div class="col-6 col-xl-3 fade-up">
+        <div class="stat-card stat-card-1">
+            <div class="stat-icon-wrap"><i class="bi bi-calendar-day"></i></div>
+            <div class="stat-num">{{ stats.today }}</div>
+            <div class="stat-lbl">Today's Meetings</div>
         </div>
     </div>
-    <div class="col-6 col-lg-3">
-        <div class="stat-card sc-cyan">
-            <div class="stat-icon si-cyan"><i class="bi bi-calendar-week-fill"></i></div>
-            <div class="stat-number">{{ stats.this_week }}</div>
-            <div class="stat-label">This Week</div>
+    <div class="col-6 col-xl-3 fade-up">
+        <div class="stat-card stat-card-2">
+            <div class="stat-icon-wrap"><i class="bi bi-calendar-week"></i></div>
+            <div class="stat-num">{{ stats.this_week }}</div>
+            <div class="stat-lbl">This Week</div>
         </div>
     </div>
-    <div class="col-6 col-lg-3">
-        <div class="stat-card sc-green">
-            <div class="stat-icon si-green"><i class="bi bi-check-circle-fill"></i></div>
-            <div class="stat-number">{{ stats.total }}</div>
-            <div class="stat-label">Total Meetings</div>
+    <div class="col-6 col-xl-3 fade-up">
+        <div class="stat-card stat-card-3">
+            <div class="stat-icon-wrap"><i class="bi bi-check2-circle"></i></div>
+            <div class="stat-num">{{ stats.total }}</div>
+            <div class="stat-lbl">Total Meetings</div>
         </div>
     </div>
-    <div class="col-6 col-lg-3">
-        <div class="stat-card sc-orange">
-            <div class="stat-icon si-orange"><i class="bi bi-x-circle-fill"></i></div>
-            <div class="stat-number">{{ stats.cancelled }}</div>
-            <div class="stat-label">Cancelled</div>
+    <div class="col-6 col-xl-3 fade-up">
+        <div class="stat-card stat-card-4">
+            <div class="stat-icon-wrap"><i class="bi bi-x-circle"></i></div>
+            <div class="stat-num">{{ stats.cancelled }}</div>
+            <div class="stat-lbl">Cancelled</div>
         </div>
     </div>
 </div>
 
-<!-- Meeting lists -->
+<!-- Meetings -->
 <div class="row g-4">
     <div class="col-lg-6">
-        <div class="section-title"><i class="bi bi-clock-fill"></i> Today's Schedule</div>
+        <div class="section-label"><i class="bi bi-clock-fill" style="color:var(--primary);"></i> Today's Schedule</div>
 
         {% if todays %}
             {% for m in todays %}
-            <a href="/meetings/{{ m.id }}" class="meeting-card priority-{{ m.priority }} {% if m.status == 'cancelled' %}cancelled{% endif %}">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <a href="/meetings/{{ m.id }}" class="meeting-row priority-{{ m.priority }} {% if m.status == 'cancelled' %}cancelled{% endif %}">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
                     <div style="flex:1; min-width:0;">
-                        <div class="meeting-title">{{ m.title }}</div>
-                        <div class="meeting-meta">
-                            <span><i class="bi bi-clock"></i>{{ m.start_time.strftime('%I:%M %p') }} – {{ m.end_time.strftime('%I:%M %p') }}</span>
-                            {% if m.location %}<span><i class="bi bi-geo-alt"></i>{{ m.location }}</span>{% endif %}
-                            {% if m.attendees %}<span><i class="bi bi-people"></i>{{ m.attendees | length }}</span>{% endif %}
+                        <div class="meeting-row-title">{{ m.title }}</div>
+                        <div class="meeting-row-meta">
+                            <span><i class="bi bi-clock" style="color:var(--primary);"></i>{{ m.start_time.strftime('%I:%M %p') }} – {{ m.end_time.strftime('%I:%M %p') }}</span>
+                            {% if m.location %}<span><i class="bi bi-geo-alt" style="color:var(--rose);"></i>{{ m.location }}</span>{% endif %}
+                            {% if m.attendees %}<span><i class="bi bi-people" style="color:var(--emerald);"></i>{{ m.attendees | length }} people</span>{% endif %}
                         </div>
                     </div>
-                    <span class="badge-status status-{{ m.status }}" style="margin-left:12px; flex-shrink:0;">
-                        {{ m.status | replace('_', ' ') | title }}
-                    </span>
+                    <span class="badge-nexus bn-{{ m.status }}" style="flex-shrink:0;">{{ m.status | replace('_',' ') | title }}</span>
                 </div>
             </a>
             {% endfor %}
         {% else %}
             <div class="empty-state">
-                <i class="bi bi-calendar-check empty-state-icon"></i>
-                <div class="empty-state-text">No meetings today — enjoy your focus time.</div>
-                <a href="/meetings/new" class="btn-ghost" style="font-size:12.5px;">Schedule one</a>
+                <div class="empty-state-art">📅</div>
+                <div class="empty-state-title">No meetings today</div>
+                <div class="empty-state-text">Your schedule is clear — perfect for deep work.</div>
+                <a href="/meetings/new" class="btn-outline-nexus" style="font-size:13px;">+ Schedule one</a>
             </div>
         {% endif %}
     </div>
 
     <div class="col-lg-6">
-        <div class="section-title"><i class="bi bi-arrow-right-circle-fill"></i> Coming Up (48h)</div>
+        <div class="section-label"><i class="bi bi-lightning-charge-fill" style="color:var(--violet);"></i> Coming Up (48h)</div>
 
         {% if upcoming %}
             {% for m in upcoming %}
-            <a href="/meetings/{{ m.id }}" class="meeting-card priority-{{ m.priority }} {% if m.status == 'cancelled' %}cancelled{% endif %}">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <a href="/meetings/{{ m.id }}" class="meeting-row priority-{{ m.priority }} {% if m.status == 'cancelled' %}cancelled{% endif %}">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
                     <div style="flex:1; min-width:0;">
-                        <div class="meeting-title">{{ m.title }}</div>
-                        <div class="meeting-meta">
-                            <span><i class="bi bi-calendar3"></i>{{ m.start_time.strftime('%b %d') }}</span>
-                            <span><i class="bi bi-clock"></i>{{ m.start_time.strftime('%I:%M %p') }}</span>
-                            {% if m.organizer %}<span><i class="bi bi-person"></i>{{ m.organizer }}</span>{% endif %}
+                        <div class="meeting-row-title">{{ m.title }}</div>
+                        <div class="meeting-row-meta">
+                            <span><i class="bi bi-calendar3" style="color:var(--primary);"></i>{{ m.start_time.strftime('%b %d') }}</span>
+                            <span><i class="bi bi-clock" style="color:var(--violet);"></i>{{ m.start_time.strftime('%I:%M %p') }}</span>
+                            {% if m.organizer %}<span><i class="bi bi-person" style="color:var(--cyan);"></i>{{ m.organizer }}</span>{% endif %}
                         </div>
                     </div>
-                    <span class="priority-badge pb-{{ m.priority }}" style="margin-left:12px; flex-shrink:0;">
-                        {{ m.priority | title }}
-                    </span>
+                    <span class="pb-nexus pb-{{ m.priority }}" style="flex-shrink:0;">{{ m.priority | title }}</span>
                 </div>
             </a>
             {% endfor %}
         {% else %}
             <div class="empty-state">
-                <i class="bi bi-emoji-smile empty-state-icon"></i>
+                <div class="empty-state-art">😎</div>
+                <div class="empty-state-title">All clear ahead</div>
                 <div class="empty-state-text">Nothing scheduled in the next 48 hours.</div>
             </div>
         {% endif %}

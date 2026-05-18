@@ -3,24 +3,119 @@
 
 {% block extra_css %}
 <style>
-    .fc-theme-standard td, .fc-theme-standard th { border-color: var(--border) !important; }
-    .fc-theme-standard .fc-scrollgrid { border-color: var(--border) !important; }
+    .cal-wrap {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--r-xl);
+        padding: 24px;
+        box-shadow: var(--shadow);
+    }
+
+    /* FullCalendar light overrides */
+    .fc .fc-toolbar { margin-bottom: 20px !important; flex-wrap: wrap; gap: 10px; }
+    .fc .fc-toolbar-chunk { display: flex; gap: 6px; align-items: center; }
+    .fc .fc-toolbar-title {
+        font-family: 'Plus Jakarta Sans', sans-serif !important;
+        font-size: 18px !important; font-weight: 800 !important;
+        color: var(--text) !important; letter-spacing: -0.4px;
+    }
+    .fc .fc-button {
+        background: var(--surface) !important;
+        border: 1.5px solid var(--border-2) !important;
+        color: var(--text-muted) !important;
+        font-size: 12px !important; font-weight: 600 !important;
+        border-radius: 9px !important; padding: 7px 14px !important;
+        box-shadow: var(--shadow-sm) !important;
+        transition: all 0.15s !important;
+        font-family: 'Inter', sans-serif !important;
+    }
+    .fc .fc-button:hover {
+        background: var(--primary-soft) !important;
+        color: var(--primary) !important;
+        border-color: var(--primary) !important;
+    }
+    .fc .fc-button-active,
+    .fc .fc-button-primary:not(:disabled).fc-button-active {
+        background: linear-gradient(135deg, var(--primary), var(--violet)) !important;
+        border-color: transparent !important;
+        color: white !important;
+        box-shadow: 0 3px 10px var(--primary-glow) !important;
+    }
+    .fc .fc-button:disabled { opacity: 0.4 !important; }
+
+    .fc th {
+        color: var(--text-muted) !important;
+        font-size: 11px !important; font-weight: 700 !important;
+        letter-spacing: 0.8px !important; text-transform: uppercase !important;
+        padding: 10px 0 !important;
+    }
+    .fc td, .fc th { border-color: var(--border) !important; }
+    .fc .fc-scrollgrid { border-color: var(--border) !important; border-radius: 12px; overflow: hidden; }
+
     .fc .fc-daygrid-day { background: transparent !important; }
-    .fc .fc-col-header-cell { background: var(--bg-2) !important; }
-    .fc .fc-list-event:hover td { background: var(--bg-card-hover) !important; }
-    .fc .fc-list-day-cushion { background: var(--bg-2) !important; }
+    .fc .fc-daygrid-day:hover { background: var(--surface-2) !important; }
+    .fc .fc-daygrid-day.fc-day-today { background: var(--primary-soft) !important; }
+    .fc .fc-daygrid-day-number {
+        color: var(--text-muted) !important; font-size: 13px !important;
+        font-weight: 500 !important; padding: 6px 10px !important;
+    }
+    .fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
+        color: var(--primary) !important; font-weight: 800 !important;
+    }
+    .fc .fc-daygrid-day.fc-day-other .fc-daygrid-day-number { color: var(--text-light) !important; }
+
+    .fc-event {
+        border-radius: 6px !important; border: none !important;
+        font-size: 11.5px !important; font-weight: 600 !important;
+        padding: 2px 6px !important; cursor: pointer !important;
+    }
+    .fc-event:hover { filter: brightness(0.92) !important; }
+
+    .fc .fc-now-indicator { background: var(--rose) !important; border-color: var(--rose) !important; }
+    .fc .fc-timegrid-col.fc-day-today { background: var(--primary-soft) !important; }
+
+    .fc .fc-list-event:hover td { background: var(--primary-soft) !important; }
+    .fc .fc-list-day-cushion { background: var(--surface-2) !important; font-size: 12px !important; color: var(--text-muted) !important; font-weight: 700 !important; letter-spacing: 0.5px; text-transform: uppercase; }
     .fc .fc-list-event td { border-color: var(--border) !important; color: var(--text) !important; }
-    .fc .fc-list-empty { background: var(--bg-card) !important; color: var(--text-muted) !important; }
+    .fc .fc-list-empty { background: var(--surface) !important; }
+    .fc .fc-list-empty-cushion { color: var(--text-muted) !important; font-size: 14px; }
+
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="page-header">
-    <div class="page-title">Calendar</div>
-    <a href="/meetings/new" class="btn-nexus"><i class="bi bi-plus-lg"></i> New Meeting</a>
+    <div>
+        <div class="page-title">Cal<span>endar</span></div>
+        <div class="page-subtitle">Visualize your schedule — switch between month, week, day, or list.</div>
+    </div>
+    <a href="/meetings/new" class="btn-primary-nexus"><i class="bi bi-plus-lg"></i> New Meeting</a>
 </div>
 
-<div class="card-glass p-3">
+<!-- Legend + Filter strip -->
+<div class="card-nexus p-3 mb-4" style="display:flex; align-items:center; gap:20px; flex-wrap:wrap;">
+    <div style="font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; color:var(--text-muted);">Priority:</div>
+    <div style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-muted);">
+        <span class="legend-dot" style="background:linear-gradient(135deg, var(--primary), var(--violet));"></span> Normal
+    </div>
+    <div style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-muted);">
+        <span class="legend-dot" style="background:var(--amber);"></span> High
+    </div>
+    <div style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-muted);">
+        <span class="legend-dot" style="background:var(--rose);"></span> Critical
+    </div>
+    <div style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-muted);">
+        <span class="legend-dot" style="background:var(--text-light);"></span> Low
+    </div>
+    <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+        <div style="width:10px; height:10px; border-radius:50%; background:var(--primary); box-shadow: 0 0 0 3px var(--primary-glow);"></div>
+        <span style="font-size:12px; color:var(--text-muted);">Today</span>
+    </div>
+</div>
+
+<!-- Calendar -->
+<div class="cal-wrap fade-up">
     <div id="calendar"></div>
 </div>
 {% endblock %}
@@ -47,12 +142,28 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         eventDidMount: function(info) {
             var props = info.event.extendedProps;
+            // Color by priority
+            var colors = {
+                critical: { bg: '#F43F5E', border: '#E11D48' },
+                high:     { bg: '#F59E0B', border: '#D97706' },
+                low:      { bg: '#9CA3AF', border: '#6B7280' },
+                normal:   { bg: '#6366F1', border: '#4F46E5' }
+            };
+            var p = props.priority || 'normal';
+            var c = colors[p] || colors.normal;
+            info.el.style.backgroundColor = c.bg;
+            info.el.style.borderLeftColor = c.border;
+
             var tooltip = info.event.title;
             if (props.location) tooltip += '\n📍 ' + props.location;
             if (props.status)   tooltip += '\n● ' + props.status;
             info.el.setAttribute('title', tooltip);
         },
         height: 'auto',
+        dayMaxEvents: 4,
+        moreLinkContent: function(args) {
+            return '+' + args.num + ' more';
+        },
     });
     calendar.render();
 });

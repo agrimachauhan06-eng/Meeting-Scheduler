@@ -1,158 +1,307 @@
 {% extends "base.html" %}
 {% block title %}Email Accounts — Nexus{% endblock %}
 
+{% block extra_css %}
+<style>
+    .account-card {
+        background: var(--surface);
+        border: 1.5px solid var(--border);
+        border-radius: var(--r-lg);
+        padding: 20px 22px;
+        margin-bottom: 12px;
+        transition: all 0.2s ease;
+        position: relative; overflow: hidden;
+    }
+    .account-card:hover { border-color: var(--border-2); box-shadow: var(--shadow); }
+    .account-card::before {
+        content: '';
+        position: absolute; left: 0; top: 0; bottom: 0;
+        width: 3px;
+        background: linear-gradient(180deg, var(--primary), var(--violet));
+        border-radius: 0 2px 2px 0;
+    }
+    .account-card.error::before { background: var(--rose); }
+    .account-card.inactive::before { background: var(--text-light); }
+
+    .email-icon-wrap {
+        width: 44px; height: 44px; border-radius: 12px;
+        background: linear-gradient(135deg, var(--primary-soft), var(--violet-soft));
+        border: 1.5px solid var(--border-2);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 19px; color: var(--primary); flex-shrink: 0;
+    }
+    .account-email {
+        font-size: 14.5px; font-weight: 700; color: var(--text);
+        font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .account-meta {
+        display: flex; gap: 16px; flex-wrap: wrap;
+        font-size: 12px; color: var(--text-muted); margin-top: 5px;
+    }
+    .account-meta span { display: flex; align-items: center; gap: 4px; }
+    .badge-primary-tag {
+        font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
+        background: var(--amber-soft); color: #B45309;
+        border: 1px solid rgba(245,158,11,0.25);
+        border-radius: 20px; padding: 2px 9px;
+    }
+    .badge-inactive-tag {
+        font-size: 10px; font-weight: 700;
+        background: #F9FAFB; color: var(--text-muted);
+        border: 1px solid #E5E7EB;
+        border-radius: 20px; padding: 2px 9px;
+    }
+    .sync-status-dot {
+        display: inline-block; width: 7px; height: 7px;
+        border-radius: 50%; margin-right: 5px;
+    }
+    .action-btn {
+        display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+        padding: 7px 13px; border-radius: 9px;
+        font-size: 12.5px; font-weight: 600; font-family: 'Inter', sans-serif;
+        border: 1.5px solid var(--border-2);
+        background: var(--surface); color: var(--text-muted);
+        cursor: pointer; transition: all 0.18s ease;
+    }
+    .action-btn:hover { background: var(--primary-soft); color: var(--primary); border-color: var(--primary); }
+    .action-btn.danger:hover { background: var(--rose-soft); color: var(--rose); border-color: rgba(244,63,94,0.3); }
+    .action-btn.warn:hover { background: var(--amber-soft); color: #B45309; border-color: rgba(245,158,11,0.3); }
+
+    /* Modal tweaks */
+    .field-hint { font-size: 11.5px; color: var(--text-muted); margin-top: 5px; line-height: 1.5; }
+    .advanced-toggle {
+        font-size: 12px; font-weight: 600; color: var(--primary);
+        cursor: pointer; display: flex; align-items: center; gap: 6px;
+        background: none; border: none; padding: 0;
+        font-family: 'Inter', sans-serif;
+    }
+    .advanced-toggle:hover { color: var(--primary-dark); }
+    .check-row {
+        display: flex; align-items: center; gap: 10px;
+        padding: 9px 12px; border-radius: 9px;
+        background: var(--surface-2); cursor: pointer;
+        font-size: 13px; color: var(--text-2); font-weight: 500;
+    }
+    .check-row input[type="checkbox"] { accent-color: var(--primary); width: 15px; height: 15px; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="page-header">
     <div>
-        <div class="page-title">Email Accounts</div>
-        <div style="font-size:13px; color:var(--text-muted); margin-top:3px;">Sync meeting invites, send reminders, keep everyone in the loop.</div>
+        <div class="page-title">Email <span>Accounts</span></div>
+        <div class="page-subtitle">Connect mailboxes to sync invites and send reminder notifications.</div>
     </div>
-    <button class="btn-nexus" data-bs-toggle="modal" data-bs-target="#addEmailModal">
+    <button class="btn-primary-nexus" data-bs-toggle="modal" data-bs-target="#addEmailModal">
         <i class="bi bi-plus-lg"></i> Add Account
     </button>
 </div>
 
 {% if accounts %}
+
+    <!-- Summary strip -->
+    <div class="card-nexus p-3 mb-4" style="display:flex; gap:24px; flex-wrap:wrap; align-items:center;">
+        <div style="display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-muted);">
+            <i class="bi bi-envelope-fill" style="color:var(--primary); font-size:15px;"></i>
+            <span><strong style="color:var(--text);">{{ accounts | length }}</strong> account{{ 's' if accounts | length != 1 }}</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-muted);">
+            <span class="sync-status-dot" style="background:var(--emerald); box-shadow: 0 0 0 2px rgba(5,150,105,0.2);"></span>
+            <span><strong style="color:var(--text);">{{ accounts | selectattr('is_active') | list | length }}</strong> active</span>
+        </div>
+        <div style="margin-left:auto; font-size:12px; color:var(--text-muted);">
+            <i class="bi bi-info-circle"></i> Sync pulls meeting invites from your inbox automatically
+        </div>
+    </div>
+
     {% for acc in accounts %}
-    <div class="card-glass p-4 mb-3">
+    <div class="account-card {% if acc.sync_status == 'error' %}error{% elif not acc.is_active %}inactive{% endif %}">
         <div style="display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;">
+
             <div style="display:flex; align-items:center; gap:14px;">
-                <div style="width:42px; height:42px; border-radius:12px; background:var(--primary-dim); border:1px solid rgba(124,58,237,0.2); display:flex; align-items:center; justify-content:center; font-size:18px; color:#a78bfa; flex-shrink:0;">
+                <div class="email-icon-wrap">
                     <i class="bi bi-envelope-fill"></i>
                 </div>
                 <div>
-                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                        <span style="font-size:14px; font-weight:600; color:var(--text);">{{ acc.email }}</span>
+                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:4px;">
+                        <span class="account-email">{{ acc.email }}</span>
                         {% if acc.is_primary %}
-                        <span style="font-size:10px; font-weight:700; letter-spacing:0.5px; background:rgba(245,158,11,0.15); color:var(--orange); border:1px solid rgba(245,158,11,0.25); border-radius:20px; padding:2px 9px;">PRIMARY</span>
+                        <span class="badge-primary-tag">PRIMARY</span>
                         {% endif %}
                         {% if not acc.is_active %}
-                        <span style="font-size:10px; font-weight:700; background:rgba(100,116,139,0.15); color:var(--text-muted); border:1px solid rgba(100,116,139,0.2); border-radius:20px; padding:2px 9px;">INACTIVE</span>
+                        <span class="badge-inactive-tag">INACTIVE</span>
                         {% endif %}
                     </div>
                     {% if acc.display_name %}
-                    <div style="font-size:12.5px; color:var(--text-muted); margin-top:2px;">{{ acc.display_name }}</div>
+                    <div style="font-size:12.5px; color:var(--text-muted); margin-bottom:5px;">{{ acc.display_name }}</div>
                     {% endif %}
-                    <div style="font-size:12px; color:var(--text-muted); margin-top:4px; display:flex; gap:14px; flex-wrap:wrap;">
-                        <span><i class="bi bi-server" style="margin-right:3px;"></i>{{ acc.imap_host }}</span>
-                        <span style="color:{{ 'var(--red)' if acc.sync_status == 'error' else 'var(--text-muted)' }};">
-                            <i class="bi bi-circle-fill" style="font-size:7px; margin-right:4px;"></i>{{ acc.sync_status | title }}
+                    <div class="account-meta">
+                        <span>
+                            <i class="bi bi-server"></i> {{ acc.imap_host }}
+                        </span>
+                        <span style="color:{{ 'var(--rose)' if acc.sync_status == 'error' else 'var(--emerald)' if acc.sync_status == 'ok' else 'var(--text-muted)' }};">
+                            <span class="sync-status-dot" style="background:{{ 'var(--rose)' if acc.sync_status == 'error' else 'var(--emerald)' if acc.sync_status == 'ok' else 'var(--text-light)' }};"></span>
+                            {{ acc.sync_status | title }}
                         </span>
                         {% if acc.last_sync_time %}
-                        <span>Last sync: {{ acc.last_sync_time.strftime('%b %d, %I:%M %p') }}</span>
+                        <span>
+                            <i class="bi bi-arrow-clockwise"></i> {{ acc.last_sync_time.strftime('%b %d, %I:%M %p') }}
+                        </span>
                         {% endif %}
                     </div>
                     {% if acc.error_message %}
-                    <div style="font-size:12px; color:var(--red); margin-top:4px;">
+                    <div style="font-size:12px; color:var(--rose); margin-top:6px; display:flex; align-items:center; gap:5px;">
                         <i class="bi bi-exclamation-triangle-fill"></i> {{ acc.error_message }}
                     </div>
                     {% endif %}
                 </div>
             </div>
 
-            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <div style="display:flex; gap:7px; align-items:center; flex-wrap:wrap;">
                 <form method="POST" action="/api/sync-email-account/{{ acc.id }}" style="margin:0;">
-                    <button type="submit" class="btn-ghost" style="padding:7px 12px; font-size:12px;" title="Sync Now">
+                    <button type="submit" class="action-btn" title="Sync Now">
                         <i class="bi bi-arrow-clockwise"></i> Sync
                     </button>
                 </form>
+
                 <form method="POST" action="/settings/emails/{{ acc.id }}/toggle" style="margin:0;">
-                    <button type="submit" class="btn-ghost" style="padding:7px 12px; font-size:12px;" title="{{ 'Deactivate' if acc.is_active else 'Activate' }}">
+                    <button type="submit" class="action-btn warn"
+                            title="{{ 'Deactivate' if acc.is_active else 'Activate' }}">
                         <i class="bi bi-{{ 'pause-fill' if acc.is_active else 'play-fill' }}"></i>
+                        {{ 'Pause' if acc.is_active else 'Resume' }}
                     </button>
                 </form>
+
                 {% if not acc.is_primary %}
                 <form method="POST" action="/settings/emails/{{ acc.id }}/set-primary" style="margin:0;">
-                    <button type="submit" class="btn-ghost" style="padding:7px 12px; font-size:12px;" title="Set as Primary">
-                        <i class="bi bi-star-fill" style="color:var(--orange);"></i>
+                    <button type="submit" class="action-btn" title="Set as Primary">
+                        <i class="bi bi-star-fill" style="color:var(--amber);"></i>
                     </button>
                 </form>
                 <form method="POST" action="/settings/emails/{{ acc.id }}/delete" style="margin:0;"
                       onsubmit="return confirm('Remove this email account?')">
-                    <button type="submit" class="btn-danger-ghost" style="padding:7px 12px; font-size:12px;" title="Remove">
+                    <button type="submit" class="action-btn danger" title="Remove">
                         <i class="bi bi-trash"></i>
                     </button>
                 </form>
                 {% endif %}
             </div>
+
         </div>
     </div>
     {% endfor %}
+
 {% else %}
-    <div class="empty-state">
-        <i class="bi bi-envelope-x empty-state-icon"></i>
-        <div class="empty-state-text">No email accounts configured yet.<br>Add one to sync meeting invites automatically.</div>
-        <button class="btn-nexus" data-bs-toggle="modal" data-bs-target="#addEmailModal">
-            Add your first account
+    <div class="empty-state fade-up">
+        <div class="empty-state-art" style="font-size:32px;">
+            <i class="bi bi-envelope-x" style="font-size:32px; color:var(--primary);"></i>
+        </div>
+        <div class="empty-state-title">No email accounts yet</div>
+        <div class="empty-state-text">
+            Connect a Gmail account to automatically pull meeting invites<br>
+            from your inbox and send smart reminders to attendees.
+        </div>
+        <button class="btn-primary-nexus" data-bs-toggle="modal" data-bs-target="#addEmailModal">
+            <i class="bi bi-plus-lg"></i> Add your first account
         </button>
     </div>
 {% endif %}
 
-<!-- Add Email Modal -->
+
+<!-- ─── Add Email Modal ─── -->
 <div class="modal fade" id="addEmailModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <form method="POST" action="/settings/emails/add">
+
                 <div class="modal-header">
-                    <h5 class="modal-title">Add Email Account</h5>
+                    <h5 class="modal-title">
+                        <i class="bi bi-envelope-plus-fill" style="color:var(--primary); margin-right:8px;"></i>
+                        Add Email Account
+                    </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body" style="padding:22px;">
+
+                <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Display Name</label>
-                        <input type="text" name="display_name" class="form-control" placeholder="e.g., Agrim Singh">
+                        <input type="text" name="display_name" class="form-control"
+                               placeholder="e.g., Agrim Singh">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Email Address *</label>
-                        <input type="email" name="email" class="form-control" required placeholder="you@company.com">
+                        <input type="email" name="email" class="form-control" required
+                               placeholder="you@gmail.com">
                     </div>
-                    <div class="mb-3">
+                    <div class="mb-4">
                         <label class="form-label">App Password *</label>
-                        <input type="password" name="password" class="form-control" required placeholder="Gmail App Password">
-                        <div style="font-size:11.5px; color:var(--text-muted); margin-top:6px; line-height:1.5;">
-                            Use a Gmail App Password — not your regular password.<br>
-                            Generate at: <span style="color:var(--cyan);">Google Account → Security → App Passwords</span>
+                        <input type="password" name="password" class="form-control" required
+                               placeholder="Gmail App Password">
+                        <div class="field-hint">
+                            Use a Gmail App Password — <strong>not</strong> your regular password.<br>
+                            Get one at: <span style="color:var(--cyan);">Google Account → Security → App Passwords</span>
                         </div>
                     </div>
-                    <hr class="nexus-divider">
-                    <div style="font-size:12px; color:var(--text-muted); margin-bottom:14px; font-weight:600; letter-spacing:0.5px; text-transform:uppercase;">Advanced (defaults work for Gmail)</div>
-                    <div class="row">
-                        <div class="col-8 mb-3">
-                            <label class="form-label">IMAP Host</label>
-                            <input type="text" name="imap_host" class="form-control" value="imap.gmail.com">
+
+                    <hr class="divider" style="margin:16px 0;">
+
+                    <button type="button" class="advanced-toggle mb-3"
+                            onclick="document.getElementById('advancedFields').classList.toggle('d-none'); this.querySelector('i').classList.toggle('bi-chevron-down'); this.querySelector('i').classList.toggle('bi-chevron-up');">
+                        <i class="bi bi-chevron-down"></i> Advanced settings
+                        <span style="font-size:10.5px; font-weight:400; color:var(--text-muted); margin-left:4px;">(defaults work for Gmail)</span>
+                    </button>
+
+                    <div id="advancedFields" class="d-none">
+                        <div class="row">
+                            <div class="col-8 mb-3">
+                                <label class="form-label">IMAP Host</label>
+                                <input type="text" name="imap_host" class="form-control" value="imap.gmail.com">
+                            </div>
+                            <div class="col-4 mb-3">
+                                <label class="form-label">Port</label>
+                                <input type="number" name="imap_port" class="form-control" value="993">
+                            </div>
                         </div>
-                        <div class="col-4 mb-3">
-                            <label class="form-label">Port</label>
-                            <input type="number" name="imap_port" class="form-control" value="993">
+                        <div class="row">
+                            <div class="col-8 mb-3">
+                                <label class="form-label">SMTP Host</label>
+                                <input type="text" name="smtp_host" class="form-control" value="smtp.gmail.com">
+                            </div>
+                            <div class="col-4 mb-3">
+                                <label class="form-label">Port</label>
+                                <input type="number" name="smtp_port" class="form-control" value="587">
+                            </div>
                         </div>
                     </div>
-                    <div class="row">
-                        <div class="col-8 mb-3">
-                            <label class="form-label">SMTP Host</label>
-                            <input type="text" name="smtp_host" class="form-control" value="smtp.gmail.com">
-                        </div>
-                        <div class="col-4 mb-3">
-                            <label class="form-label">Port</label>
-                            <input type="number" name="smtp_port" class="form-control" value="587">
-                        </div>
-                    </div>
-                    <div style="display:flex; flex-direction:column; gap:10px;">
-                        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:13px; color:var(--text);">
-                            <input type="checkbox" name="sync_enabled" checked style="accent-color:var(--primary); width:15px; height:15px;">
-                            Enable email sync (pull meeting invites from inbox)
+
+                    <div style="display:flex; flex-direction:column; gap:8px; margin-top:4px;">
+                        <label class="check-row">
+                            <input type="checkbox" name="sync_enabled" checked>
+                            <div>
+                                <div style="font-size:13px; font-weight:600;">Enable email sync</div>
+                                <div style="font-size:11.5px; color:var(--text-muted);">Pull meeting invites from your inbox</div>
+                            </div>
                         </label>
-                        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:13px; color:var(--text);">
-                            <input type="checkbox" name="notify_enabled" checked style="accent-color:var(--primary); width:15px; height:15px;">
-                            Send reminders from this account
+                        <label class="check-row">
+                            <input type="checkbox" name="notify_enabled" checked>
+                            <div>
+                                <div style="font-size:13px; font-weight:600;">Send reminders</div>
+                                <div style="font-size:11.5px; color:var(--text-muted);">Use this account to email attendees</div>
+                            </div>
                         </label>
                     </div>
                 </div>
-                <div class="modal-footer" style="padding:16px 22px; gap:10px;">
-                    <button type="button" class="btn-ghost" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn-nexus">Add Account</button>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-outline-nexus" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn-primary-nexus">
+                        <i class="bi bi-plus-lg"></i> Add Account
+                    </button>
                 </div>
+
             </form>
         </div>
     </div>
 </div>
+
 {% endblock %}

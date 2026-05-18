@@ -1,23 +1,38 @@
 {% extends "base.html" %}
 {% block title %}New Meeting — Nexus{% endblock %}
 
+{% block extra_css %}
+<style>
+    .form-section-title {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 13px; font-weight: 700; color: var(--primary);
+        letter-spacing: 0.5px; text-transform: uppercase;
+        margin-bottom: 16px; padding-bottom: 10px;
+        border-bottom: 2px solid var(--primary-soft);
+        display: flex; align-items: center; gap: 8px;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="page-header">
     <div>
-        <div class="page-title">New Meeting</div>
-        <div style="font-size:13px; color:var(--text-muted); margin-top:3px;">Fill in the details and we'll handle the rest.</div>
+        <div class="page-title">New <span>Meeting</span></div>
+        <div class="page-subtitle">Schedule a new meeting and notify attendees automatically.</div>
     </div>
-    <a href="/" class="btn-ghost"><i class="bi bi-arrow-left"></i> Back</a>
+    <a href="/" class="btn-outline-nexus"><i class="bi bi-arrow-left"></i> Back</a>
 </div>
 
-<div class="card-glass p-4" style="max-width:680px;">
+<div class="card-nexus p-4" style="max-width:700px;">
     <form method="POST">
+
+        <div class="form-section-title"><i class="bi bi-type"></i> Basic Info</div>
 
         <div class="mb-4">
             <label class="form-label">Meeting Title *</label>
             <input type="text" name="title" class="form-control" required
-                   placeholder="e.g., Product Roadmap Review"
-                   style="font-size:15px; font-weight:500; padding:11px 16px;">
+                   placeholder="e.g., Q2 Product Roadmap Review"
+                   style="font-size:15px; font-weight:600; padding:12px 16px;">
         </div>
 
         <div class="row mb-4">
@@ -32,60 +47,64 @@
         </div>
 
         <div class="mb-4">
-            <label class="form-label">Description</label>
+            <label class="form-label">Description / Agenda</label>
             <textarea name="description" class="form-control" rows="3"
-                      placeholder="Agenda, context, or notes…"></textarea>
+                      placeholder="What will you cover? Add context or agenda items…"></textarea>
         </div>
+
+        <hr class="divider">
+        <div class="form-section-title"><i class="bi bi-geo-alt"></i> Location & Link</div>
 
         <div class="row mb-4">
             <div class="col-md-6 mb-3 mb-md-0">
                 <label class="form-label">Location</label>
-                <input type="text" name="location" class="form-control"
-                       placeholder="e.g., Conference Room B">
+                <input type="text" name="location" class="form-control" placeholder="e.g., Conference Room B, Mumbai">
             </div>
             <div class="col-md-6">
-                <label class="form-label">Meeting Link</label>
-                <input type="url" name="meeting_link" class="form-control"
-                       placeholder="https://meet.google.com/…">
+                <label class="form-label">Video Link</label>
+                <input type="url" name="meeting_link" class="form-control" placeholder="https://meet.google.com/…">
             </div>
         </div>
+
+        <hr class="divider">
+        <div class="form-section-title"><i class="bi bi-sliders"></i> Settings</div>
 
         <div class="row mb-4">
             <div class="col-md-6 mb-3 mb-md-0">
                 <label class="form-label">Priority</label>
                 <select name="priority" class="form-select">
-                    <option value="low">Low</option>
-                    <option value="normal" selected>Normal</option>
-                    <option value="high">High</option>
-                    <option value="critical">Critical</option>
+                    <option value="low">🔵 Low</option>
+                    <option value="normal" selected>🟣 Normal</option>
+                    <option value="high">🟠 High</option>
+                    <option value="critical">🔴 Critical</option>
                 </select>
             </div>
             <div class="col-md-6">
-                <label class="form-label">Reminders <span style="color:var(--text-muted); font-weight:400;">(minutes before)</span></label>
-                <input type="text" name="reminder_minutes" class="form-control"
-                       value="15,5" placeholder="e.g., 30,15,5">
+                <label class="form-label">Reminders <span style="color:var(--text-light); font-weight:400;">(minutes before)</span></label>
+                <input type="text" name="reminder_minutes" class="form-control" value="15,5" placeholder="30,15,5">
             </div>
         </div>
 
+        <hr class="divider">
+        <div class="form-section-title"><i class="bi bi-people"></i> People</div>
+
         <div class="mb-4">
-            <label class="form-label">Attendees <span style="color:var(--text-muted); font-weight:400;">(comma-separated emails)</span></label>
+            <label class="form-label">Attendees <span style="color:var(--text-light); font-weight:400;">(comma-separated emails)</span></label>
             <input type="text" name="attendees" class="form-control"
                    placeholder="alice@company.com, bob@company.com">
         </div>
 
         <div class="mb-4">
-            <label class="form-label">Tags <span style="color:var(--text-muted); font-weight:400;">(comma-separated)</span></label>
-            <input type="text" name="tags" class="form-control"
-                   placeholder="design, q2, product">
+            <label class="form-label">Tags <span style="color:var(--text-light); font-weight:400;">(comma-separated)</span></label>
+            <input type="text" name="tags" class="form-control" placeholder="design, product, q2">
         </div>
 
-        <hr class="nexus-divider">
-
+        <hr class="divider">
         <div style="display:flex; gap:10px;">
-            <button type="submit" class="btn-nexus">
+            <button type="submit" class="btn-primary-nexus" style="padding:12px 28px; font-size:14px;">
                 <i class="bi bi-check-lg"></i> Create Meeting
             </button>
-            <a href="/" class="btn-ghost">Cancel</a>
+            <a href="/" class="btn-outline-nexus">Cancel</a>
         </div>
 
     </form>
