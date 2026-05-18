@@ -359,3 +359,127 @@ def delete_email_account(account_id):
         db.session.commit()
         flash(f"Email account '{acc.email}' removed.", "info")
     return redirect(url_for("main.email_accounts"))
+
+
+# --- Public Booking Page ---
+
+def _get_available_slots(date, duration_min):
+    """Return list of available UTC slot dicts for a given date and duration."""
+    from datetime import date as date_type
+    WORK_START = 8   # 8am UTC
+    WORK_END   = 20  # 8pm UTC
+    BUFFER_MIN = 15
+    STEP_MIN   = 15
+
+    day_start = datetime(date.year, date.month, date.day, 0, 0, 0)
+    day_end   = day_start + timedelta(days=1)
+
+    meetings = Meeting.query.filter(
+        Meeting.start_time >= day_start,
+        Meeting.start_time < day_end,
+        Meeting.status != "cancelled",
+    ).all()
+
+    blocked = [
+        (m.start_time, m.end_time + timedelta(minutes=BUFFER_MIN))
+        for m in meetings
+    ]
+
+    slots = []
+    current = datetime(date.year, date.month, date.day, WORK_START, 0, 0)
+    end_of_day = datetime(date.year, date.month, date.day, WORK_END, 0, 0)
+    now_utc = datetime.utcnow()
+
+    while current + timedelta(minutes=duration_min) <= end_of_day:
+        slot_end = current + timedelta(minutes=duration_min)
+        if current > now_utc:
+            available = all(
+                not (current < b_end and slot_end > b_start)
+                for b_start, b_end in blocked
+            )
+            if available:
+                slots.append({
+                    "utc": current.strftime("%Y-%m-%dT%H:%M:00"),
+                    "time": current.strftime("%H:%M"),
+                    "label": current.strftime("%I:%M %p"),
+                })
+        current += timedelta(minutes=STEP_MIN)
+
+    return slots
+
+
+@main_bp.route("/book", methods=["GET"])
+def book_meeting():
+    primary = EmailAccount.query.filter_by(is_primary=True).first()
+    organizer_name = (primary.display_name or primary.email) if primary else "Us"
+    return render_template("booking.html", organizer_name=organizer_name)
+
+
+@main_bp.route("/book", methods=["POST"])
+def book_meeting_submit():
+    name      = request.form.get("name", "").strip()
+    email     = request.form.get("email", "").strip()
+    title     = request.form.get("title", "").strip()
+    notes     = request.form.get("notes", "").strip()
+    utc_time  = request.form.get("utc_time", "").strip()
+    duration  = request.form.get("duration", "30").strip()
+
+    if not all([name, email, title, utc_time, duration]):
+        flash("Please fill in all required fields and select a time slot.", "error")
+        return redirect(url_for("main.book_meeting"))
+
+    try:
+        start_time = datetime.fromisoformat(utc_time)
+        duration_min = int(duration)
+        end_time = start_time + timedelta(minutes=duration_min)
+    except (ValueError, TypeError):
+        flash("Invalid time selection. Please try again.", "error")
+        return redirect(url_for("main.book_meeting"))
+
+    meeting = MeetingManager.create_meeting(
+        title=title,
+        start_time=start_time,
+        end_time=end_time,
+        description=notes,
+        source="booking",
+        attendees=[{"name": name, "email": email}],
+        reminder_minutes=[15],
+    )
+
+    try:
+        InviteService.send_invites(meeting)
+    except Exception:
+        pass
+
+    return redirect(url_for("main.book_confirmed", meeting_id=meeting.id))
+
+
+@main_bp.route("/book/confirmed")
+def book_confirmed():
+    meeting_id = request.args.get("meeting_id", type=int)
+    meeting = MeetingManager.get_meeting(meeting_id) if meeting_id else None
+    return render_template("booking_confirmed.html", meeting=meeting)
+
+
+@main_bp.route("/api/booking/slots")
+def api_booking_slots():
+    date_str = request.args.get("date", "")
+    duration = request.args.get("duration", 30, type=int)
+
+    if not date_str:
+        return jsonify({"error": "date required"}), 400
+
+    try:
+        from datetime import date as date_type
+        date = datetime.strptime(date_str, "%Y-%m-%d").date()
+    except ValueError:
+        return jsonify({"error": "invalid date"}), 400
+
+    if date.weekday() >= 5:
+        return jsonify({"slots": [], "reason": "weekend"})
+
+    if date < datetime.utcnow().date():
+        return jsonify({"slots": [], "reason": "past"})
+
+    slots = _get_available_slots(date, duration)
+    return jsonify({"slots": slots})

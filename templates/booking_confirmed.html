@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Booking Confirmed!</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary:      #6366F1;
+            --primary-dark: #4F46E5;
+            --primary-soft: #EEF2FF;
+            --primary-glow: rgba(99,102,241,0.22);
+            --violet:       #7C3AED;
+            --emerald:      #059669;
+            --emerald-soft: #ECFDF5;
+            --bg:           #F7F7FB;
+            --surface:      #FFFFFF;
+            --border:       rgba(99,102,241,0.1);
+            --border-2:     rgba(99,102,241,0.2);
+            --text:         #0F0E1A;
+            --text-2:       #374151;
+            --text-muted:   #6B7280;
+            --text-light:   #9CA3AF;
+            --shadow:       0 4px 16px rgba(99,102,241,0.1), 0 1px 4px rgba(0,0,0,0.05);
+            --shadow-lg:    0 12px 40px rgba(99,102,241,0.14), 0 4px 12px rgba(0,0,0,0.07);
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg); color: var(--text);
+            min-height: 100vh; font-size: 14px; line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        body::before {
+            content: '';
+            position: fixed; inset: 0; z-index: 0;
+            background:
+                radial-gradient(ellipse 700px 500px at 0% 0%, rgba(99,102,241,0.07) 0%, transparent 60%),
+                radial-gradient(ellipse 500px 400px at 100% 100%, rgba(5,150,105,0.05) 0%, transparent 60%);
+            pointer-events: none;
+        }
+        body::after {
+            content: '';
+            position: fixed; inset: 0; z-index: 0;
+            background-image: radial-gradient(circle, rgba(99,102,241,0.07) 1px, transparent 1px);
+            background-size: 24px 24px;
+            pointer-events: none;
+        }
+
+        .page-wrap {
+            max-width: 520px; width: 100%;
+            padding: 32px 20px;
+            position: relative; z-index: 1;
+            text-align: center;
+        }
+
+        /* CHECKMARK ANIMATION */
+        .success-ring {
+            width: 88px; height: 88px; border-radius: 50%;
+            background: var(--emerald-soft);
+            border: 3px solid rgba(5,150,105,0.2);
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 24px;
+            animation: popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+        }
+        .success-ring i { font-size: 38px; color: var(--emerald); }
+
+        @keyframes popIn {
+            from { transform: scale(0); opacity: 0; }
+            to   { transform: scale(1); opacity: 1; }
+        }
+
+        .confirm-title {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 28px; font-weight: 800;
+            letter-spacing: -0.7px; color: var(--text);
+            margin-bottom: 10px;
+            animation: fadeUp 0.4s 0.15s both;
+        }
+        .confirm-sub {
+            font-size: 14px; color: var(--text-muted);
+            line-height: 1.6; margin-bottom: 28px;
+            animation: fadeUp 0.4s 0.2s both;
+        }
+
+        /* MEETING DETAIL CARD */
+        .confirm-card {
+            background: var(--surface);
+            border: 1.5px solid var(--border);
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: var(--shadow-lg);
+            text-align: left;
+            margin-bottom: 24px;
+            animation: fadeUp 0.4s 0.25s both;
+        }
+        .confirm-card-title {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 17px; font-weight: 800; color: var(--text);
+            letter-spacing: -0.3px; margin-bottom: 16px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border);
+        }
+        .detail-row {
+            display: flex; align-items: flex-start; gap: 12px;
+            padding: 9px 0; border-bottom: 1px solid var(--border);
+        }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-icon {
+            width: 30px; height: 30px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; flex-shrink: 0;
+        }
+        .detail-label { font-size: 11px; font-weight: 700; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+        .detail-value { font-size: 13.5px; font-weight: 500; color: var(--text); }
+
+        /* EMAIL NOTE */
+        .email-note {
+            display: flex; align-items: center; gap: 10px;
+            background: var(--emerald-soft);
+            border: 1.5px solid rgba(5,150,105,0.15);
+            border-radius: 12px; padding: 12px 16px;
+            font-size: 13px; color: var(--emerald);
+            margin-bottom: 24px;
+            animation: fadeUp 0.4s 0.3s both;
+        }
+
+        /* ACTIONS */
+        .actions {
+            display: flex; gap: 10px; flex-wrap: wrap;
+            justify-content: center;
+            animation: fadeUp 0.4s 0.35s both;
+        }
+        .btn-primary-n {
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: 11px 22px;
+            background: linear-gradient(135deg, var(--primary), var(--violet));
+            color: white; border: none; border-radius: 11px;
+            font-size: 13.5px; font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer; text-decoration: none;
+            box-shadow: 0 4px 14px var(--primary-glow);
+            transition: all 0.2s ease;
+        }
+        .btn-primary-n:hover { color: white; transform: translateY(-2px); filter: brightness(1.06); }
+        .btn-outline-n {
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: 10px 20px;
+            background: white; color: var(--text-2);
+            border: 1.5px solid var(--border-2); border-radius: 11px;
+            font-size: 13.5px; font-weight: 500;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer; text-decoration: none;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+            transition: all 0.18s ease;
+        }
+        .btn-outline-n:hover { color: var(--primary); border-color: var(--primary); background: var(--primary-soft); }
+
+        .footer-text {
+            margin-top: 28px; font-size: 12px; color: var(--text-light);
+            animation: fadeUp 0.4s 0.4s both;
+        }
+        .footer-text a { color: var(--primary); text-decoration: none; font-weight: 600; }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(14px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+<div class="page-wrap">
+
+    <div class="success-ring">
+        <i class="bi bi-check-lg"></i>
+    </div>
+
+    <div class="confirm-title">You're booked!</div>
+    <div class="confirm-sub">
+        Your meeting has been confirmed. A calendar invite<br>has been sent to your email address.
+    </div>
+
+    {% if meeting %}
+    <div class="confirm-card">
+        <div class="confirm-card-title">{{ meeting.title }}</div>
+
+        <div class="detail-row">
+            <div class="detail-icon" style="background:var(--primary-soft);">
+                <i class="bi bi-calendar3" style="color:var(--primary);"></i>
+            </div>
+            <div>
+                <div class="detail-label">Date</div>
+                <div class="detail-value">{{ meeting.start_time.strftime('%A, %B %d, %Y') }}</div>
+            </div>
+        </div>
+
+        <div class="detail-row">
+            <div class="detail-icon" style="background:#F5F3FF;">
+                <i class="bi bi-clock-fill" style="color:var(--violet);"></i>
+            </div>
+            <div>
+                <div class="detail-label">Time (UTC)</div>
+                <div class="detail-value">
+                    {{ meeting.start_time.strftime('%I:%M %p') }} – {{ meeting.end_time.strftime('%I:%M %p') }}
+                    <span style="color:var(--text-muted); font-size:12px; margin-left:6px;">
+                        ({{ ((meeting.end_time - meeting.start_time).seconds // 60) }} min)
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        {% if meeting.attendees %}
+        <div class="detail-row">
+            <div class="detail-icon" style="background:var(--emerald-soft);">
+                <i class="bi bi-person-fill" style="color:var(--emerald);"></i>
+            </div>
+            <div>
+                <div class="detail-label">Confirmation sent to</div>
+                <div class="detail-value">{{ meeting.attendees[0].email }}</div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="email-note">
+        <i class="bi bi-envelope-check-fill" style="font-size:18px; flex-shrink:0;"></i>
+        <span>Check your inbox for a calendar invite with all the details.</span>
+    </div>
+
+    <div class="actions">
+        <a href="/book" class="btn-outline-n">
+            <i class="bi bi-plus-lg"></i> Book another
+        </a>
+    </div>
+
+    <div class="footer-text">
+        Powered by <a href="/">Nexus</a> — Smart Meeting Scheduler
+    </div>
+
+</div>
+
+<script>
+    // Convert UTC times to local on page load
+    document.querySelectorAll('[data-utc]').forEach(el => {
+        const d = new Date(el.dataset.utc + 'Z');
+        el.textContent = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    });
+</script>
+</body>
+</html>
