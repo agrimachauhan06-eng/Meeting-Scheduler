@@ -24,15 +24,6 @@
         width: 140px; height: 140px; border-radius: 50%;
         background: rgba(255,255,255,0.05);
     }
-    .greeting-emoji {
-        font-size: 36px; display: block; margin-bottom: 8px;
-        animation: wave 2s ease-in-out infinite;
-    }
-    @keyframes wave {
-        0%, 100% { transform: rotate(0deg); }
-        25% { transform: rotate(-10deg); }
-        75% { transform: rotate(10deg); }
-    }
     .greeting-title {
         font-family: 'Plus Jakarta Sans', sans-serif;
         font-size: 26px; font-weight: 800;
@@ -57,7 +48,6 @@
 
 <!-- Greeting strip -->
 <div class="greeting-strip fade-up">
-    <span class="greeting-emoji">👋</span>
     <div class="greeting-title">Welcome back!</div>
     <div class="greeting-sub">Here's what's happening with your schedule today.</div>
     <div class="greeting-date d-none d-md-block">
