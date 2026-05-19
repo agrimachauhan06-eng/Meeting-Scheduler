@@ -293,6 +293,7 @@ def api_meetings():
     for m in meetings:
         style = cancelled_style if m.status == "cancelled" else palette.get(m.priority, palette["normal"])
 
+        priority_key = "cancelled" if m.status == "cancelled" else (m.priority or "normal")
         events.append({
             "id": m.id,
             "title": m.title,
@@ -301,6 +302,7 @@ def api_meetings():
             "backgroundColor": style["backgroundColor"],
             "textColor": style["textColor"],
             "borderColor": style["borderColor"],
+            "classNames": [f"fc-priority-{priority_key}"],
             "url": f"/meetings/{m.id}",
             "extendedProps": {
                 "location": m.location,

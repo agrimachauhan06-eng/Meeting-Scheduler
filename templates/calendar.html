@@ -83,6 +83,18 @@
     .fc .fc-list-empty-cushion { color: var(--text-muted) !important; font-size: 14px; }
 
     .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+    /* Priority event colors — !important overrides FC defaults */
+    .fc-priority-normal,   .fc-priority-normal .fc-event-main   { background-color: #E0E7FF !important; color: #3730A3 !important; }
+    .fc-priority-high,     .fc-priority-high .fc-event-main     { background-color: #FEF3C7 !important; color: #92400E !important; }
+    .fc-priority-critical, .fc-priority-critical .fc-event-main { background-color: #FFE4E6 !important; color: #9F1239 !important; }
+    .fc-priority-low,      .fc-priority-low .fc-event-main      { background-color: #F3F4F6 !important; color: #374151 !important; }
+    .fc-priority-cancelled,.fc-priority-cancelled .fc-event-main{ background-color: #F1F5F9 !important; color: #94A3B8 !important; }
+    .fc-priority-normal   { border-left: 3px solid #6366F1 !important; }
+    .fc-priority-high     { border-left: 3px solid #F59E0B !important; }
+    .fc-priority-critical { border-left: 3px solid #F43F5E !important; }
+    .fc-priority-low      { border-left: 3px solid #9CA3AF !important; }
+    .fc-priority-cancelled{ border-left: 3px solid #CBD5E1 !important; }
 </style>
 {% endblock %}
 
