@@ -880,3 +880,73 @@ def bulk_delete_by_keywords():
     db.session.commit()
     flash(f"Deleted {total} existing meeting(s) matching blocked keywords.", "success")
     return redirect(url_for("main.sync_filters"))
+
+
+# ── Tasks / Reminders ──────────────────────────────────────────────────────────
+
+@main_bp.route("/tasks")
+def tasks():
+    from app.models import Task
+    open_tasks      = Task.query.filter_by(is_completed=False).order_by(Task.created_at.desc()).all()
+    completed_tasks = Task.query.filter_by(is_completed=True).order_by(Task.completed_at.desc()).limit(30).all()
+    return render_template("tasks.html", open_tasks=open_tasks, completed_tasks=completed_tasks)
+
+
+@main_bp.route("/tasks/add", methods=["POST"])
+def add_task():
+    from app.models import Task
+    from app.invite_service import InviteService
+    title          = request.form.get("title", "").strip()
+    assigned_to    = request.form.get("assigned_to", "").strip()
+    assigned_email = request.form.get("assigned_email", "").strip()
+    due_date_str   = request.form.get("due_date", "").strip()
+    priority       = request.form.get("priority", "normal")
+    notes          = request.form.get("notes", "").strip()
+    if not title:
+        flash("Reminder text is required.", "error")
+        return redirect(url_for("main.tasks"))
+    due_date = None
+    if due_date_str:
+        try:
+            due_date = datetime.strptime(due_date_str, "%Y-%m-%d")
+        except ValueError:
+            pass
+    task = Task(title=title, assigned_to=assigned_to, assigned_email=assigned_email,
+                due_date=due_date, priority=priority, notes=notes)
+    db.session.add(task)
+    db.session.commit()
+    sent = InviteService.send_task_notification(task)
+    if sent:
+        flash(f"Reminder added and email sent to {assigned_email}.", "success")
+    else:
+        flash("Reminder added.", "success")
+    return redirect(url_for("main.tasks"))
+
+
+@main_bp.route("/tasks/<int:task_id>/complete", methods=["POST"])
+def complete_task(task_id):
+    from app.models import Task
+    task = Task.query.get_or_404(task_id)
+    task.is_completed = True
+    task.completed_at = datetime.utcnow()
+    db.session.commit()
+    return redirect(url_for("main.tasks"))
+
+
+@main_bp.route("/tasks/<int:task_id>/reopen", methods=["POST"])
+def reopen_task(task_id):
+    from app.models import Task
+    task = Task.query.get_or_404(task_id)
+    task.is_completed = False
+    task.completed_at = None
+    db.session.commit()
+    return redirect(url_for("main.tasks"))
+
+
+@main_bp.route("/tasks/<int:task_id>/delete", methods=["POST"])
+def delete_task(task_id):
+    from app.models import Task
+    task = Task.query.get_or_404(task_id)
+    db.session.delete(task)
+    db.session.commit()
+    return redirect(url_for("main.tasks"))

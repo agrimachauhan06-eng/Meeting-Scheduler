@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+{% block title %}Reminders — Nexus{% endblock %}
+
+{% block extra_css %}
+<style>
+    .task-card {
+        background: var(--surface);
+        border: 1.5px solid var(--border);
+        border-radius: var(--r-lg);
+        padding: 16px 20px;
+        display: flex; align-items: flex-start; gap: 14px;
+        transition: all 0.18s ease;
+        position: relative; overflow: hidden;
+    }
+    .task-card:hover { border-color: var(--border-2); box-shadow: var(--shadow); }
+    .task-card.completed { opacity: 0.6; }
+    .task-card.completed .task-title { text-decoration: line-through; color: var(--text-muted); }
+    .task-card.priority-high::before   { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--amber); border-radius:0 2px 2px 0; }
+    .task-card.priority-critical::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--rose); border-radius:0 2px 2px 0; }
+    .task-card.priority-normal::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--primary); border-radius:0 2px 2px 0; }
+    .task-card.priority-low::before    { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--text-light); border-radius:0 2px 2px 0; }
+
+    .task-check {
+        width: 20px; height: 20px; border-radius: 6px;
+        border: 2px solid var(--border-2);
+        flex-shrink: 0; cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        margin-top: 2px; transition: all 0.15s;
+        background: var(--surface);
+    }
+    .task-check:hover { border-color: var(--primary); background: var(--primary-soft); }
+    .task-check.done  { background: var(--primary); border-color: var(--primary); }
+    .task-check.done i { color: white; font-size: 11px; }
+
+    .task-title {
+        font-size: 14px; font-weight: 600; color: var(--text);
+        line-height: 1.4; margin-bottom: 4px;
+    }
+    .task-meta {
+        display: flex; gap: 10px; flex-wrap: wrap;
+        font-size: 12px; color: var(--text-muted); align-items: center;
+    }
+    .task-meta span { display: flex; align-items: center; gap: 4px; }
+    .task-badge {
+        font-size: 11px; font-weight: 600; border-radius: 20px;
+        padding: 1px 9px; border: 1px solid;
+    }
+    .badge-person {
+        background: var(--primary-soft); color: var(--primary-dark);
+        border-color: var(--border-2);
+    }
+    .badge-high     { background: #FEF3C7; color: #92400E; border-color: #F59E0B; }
+    .badge-critical { background: #FFE4E6; color: #9F1239; border-color: #F43F5E; }
+    .badge-low      { background: #F3F4F6; color: #374151; border-color: #9CA3AF; }
+    .badge-normal   { background: var(--primary-soft); color: var(--primary-dark); border-color: var(--border-2); }
+    .badge-overdue  { background: #FFE4E6; color: #9F1239; border-color: #F43F5E; }
+
+    .task-actions { margin-left: auto; display: flex; gap: 6px; flex-shrink: 0; }
+    .task-action-btn {
+        width: 30px; height: 30px; border-radius: 8px;
+        border: 1.5px solid var(--border); background: var(--surface);
+        color: var(--text-muted); font-size: 13px;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; transition: all 0.15s;
+    }
+    .task-action-btn:hover { background: var(--rose-soft); color: var(--rose); border-color: rgba(244,63,94,0.3); }
+    .task-action-btn.reopen:hover { background: var(--primary-soft); color: var(--primary); border-color: var(--primary); }
+
+    .add-form {
+        background: var(--surface);
+        border: 1.5px solid var(--border);
+        border-radius: var(--r-xl);
+        padding: 22px 24px;
+        margin-bottom: 28px;
+    }
+    .add-form-title {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 13.5px; font-weight: 700; color: var(--text);
+        margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+    }
+    .section-label {
+        font-size: 11.5px; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.7px; color: var(--text-muted);
+        margin: 24px 0 12px;
+    }
+
+    .completed-toggle {
+        display: flex; align-items: center; gap: 8px;
+        font-size: 13px; font-weight: 600; color: var(--text-muted);
+        cursor: pointer; padding: 10px 0; border: none; background: none;
+        transition: color 0.15s;
+    }
+    .completed-toggle:hover { color: var(--text); }
+    .completed-toggle i { transition: transform 0.2s; }
+    .completed-toggle.open i { transform: rotate(90deg); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">Rem<span>inders</span></div>
+        <div class="page-subtitle">Track action items and keep your team on top of things.</div>
+    </div>
+</div>
+
+<!-- Add Reminder Form -->
+<div class="add-form fade-up">
+    <div class="add-form-title">
+        <i class="bi bi-plus-circle-fill" style="color:var(--primary);"></i>
+        New Reminder
+    </div>
+    <form method="POST" action="/tasks/add">
+        <div class="row g-3">
+            <div class="col-12">
+                <input type="text" name="title" class="form-control" required
+                       placeholder="e.g. Remind Lakshay to revamp the Outreachpro.io website"
+                       style="font-size:14px; padding:11px 14px;">
+            </div>
+            <div class="col-md-3">
+                <input type="text" name="assigned_to" class="form-control"
+                       placeholder="Assign to (e.g. Lakshay)"
+                       style="font-size:13px;">
+            </div>
+            <div class="col-md-3">
+                <input type="email" name="assigned_email" class="form-control"
+                       placeholder="Their email (for notification)"
+                       style="font-size:13px;">
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="due_date" class="form-control" style="font-size:13px;">
+            </div>
+            <div class="col-md-2">
+                <select name="priority" class="form-select" style="font-size:13px;">
+                    <option value="normal">Normal</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
+                    <option value="low">Low</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn-primary-nexus w-100">
+                    <i class="bi bi-plus-lg"></i> Add
+                </button>
+            </div>
+            <div class="col-12">
+                <textarea name="notes" class="form-control" rows="2"
+                          placeholder="Optional notes..."
+                          style="font-size:13px; resize:none;"></textarea>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Open Reminders -->
+{% if open_tasks %}
+<div class="section-label">Open — {{ open_tasks | length }}</div>
+<div style="display:flex; flex-direction:column; gap:8px;">
+{% for task in open_tasks %}
+<div class="task-card priority-{{ task.priority }} fade-up">
+    <!-- Complete button -->
+    <form method="POST" action="/tasks/{{ task.id }}/complete" style="margin:0;">
+        <button type="submit" class="task-check" title="Mark complete">
+            <i class="bi bi-check-lg"></i>
+        </button>
+    </form>
+
+    <div style="flex:1; min-width:0;">
+        <div class="task-title">{{ task.title }}</div>
+        <div class="task-meta">
+            {% if task.assigned_to %}
+            <span class="task-badge badge-person">
+                <i class="bi bi-person-fill"></i> {{ task.assigned_to }}
+            </span>
+            {% endif %}
+            <span class="task-badge badge-{{ task.priority }}">{{ task.priority | title }}</span>
+            {% if task.due_date %}
+                {% set today = now.date() if now is defined else none %}
+                {% set overdue = task.due_date.date() < today if today else false %}
+                <span class="task-badge {% if overdue %}badge-overdue{% endif %}">
+                    <i class="bi bi-calendar3"></i>
+                    {{ task.due_date.strftime('%b %d') }}
+                    {% if overdue %} · Overdue{% endif %}
+                </span>
+            {% endif %}
+            {% if task.notes %}
+            <span style="color:var(--text-muted); font-style:italic; font-size:12px;">
+                {{ task.notes | truncate(60) }}
+            </span>
+            {% endif %}
+            <span style="margin-left:auto; color:var(--text-light); font-size:11.5px;">
+                Added {{ task.created_at.strftime('%b %d') }}
+            </span>
+        </div>
+    </div>
+
+    <div class="task-actions">
+        <form method="POST" action="/tasks/{{ task.id }}/delete"
+              onsubmit="return confirm('Delete this reminder?')" style="margin:0;">
+            <button type="submit" class="task-action-btn" title="Delete">
+                <i class="bi bi-trash"></i>
+            </button>
+        </form>
+    </div>
+</div>
+{% endfor %}
+</div>
+
+{% else %}
+<div class="empty-state fade-up" style="padding:48px 0;">
+    <div class="empty-state-art">
+        <i class="bi bi-check2-all" style="font-size:32px; color:var(--emerald);"></i>
+    </div>
+    <div class="empty-state-title">All clear!</div>
+    <div class="empty-state-text">No open reminders. Add one above to track an action item.</div>
+</div>
+{% endif %}
+
+<!-- Completed Reminders -->
+{% if completed_tasks %}
+<div style="margin-top:32px;">
+    <button class="completed-toggle" onclick="toggleCompleted(this)">
+        <i class="bi bi-chevron-right"></i>
+        Completed ({{ completed_tasks | length }})
+    </button>
+    <div id="completedList" style="display:none; flex-direction:column; gap:8px; margin-top:8px;">
+    {% for task in completed_tasks %}
+    <div class="task-card completed priority-{{ task.priority }}">
+        <form method="POST" action="/tasks/{{ task.id }}/reopen" style="margin:0;">
+            <button type="submit" class="task-check done" title="Reopen">
+                <i class="bi bi-check-lg"></i>
+            </button>
+        </form>
+
+        <div style="flex:1; min-width:0;">
+            <div class="task-title">{{ task.title }}</div>
+            <div class="task-meta">
+                {% if task.assigned_to %}
+                <span class="task-badge badge-person">
+                    <i class="bi bi-person-fill"></i> {{ task.assigned_to }}
+                </span>
+                {% endif %}
+                {% if task.completed_at %}
+                <span><i class="bi bi-check2-circle"></i> Done {{ task.completed_at.strftime('%b %d') }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="task-actions">
+            <form method="POST" action="/tasks/{{ task.id }}/delete"
+                  onsubmit="return confirm('Delete this reminder?')" style="margin:0;">
+                <button type="submit" class="task-action-btn" title="Delete">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleCompleted(btn) {
+    var list = document.getElementById('completedList');
+    var open = list.style.display === 'flex';
+    list.style.display = open ? 'none' : 'flex';
+    btn.classList.toggle('open', !open);
+}
+</script>
+{% endblock %}

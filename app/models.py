@@ -160,6 +160,22 @@ class SyncFilter(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
+class Task(db.Model):
+    """Standalone reminders / action items assigned to a person."""
+    __tablename__ = "tasks"
+
+    id             = db.Column(db.Integer, primary_key=True)
+    title          = db.Column(db.String(500), nullable=False)
+    assigned_to    = db.Column(db.String(255), default="")   # person name
+    assigned_email = db.Column(db.String(255), default="")   # for email notification
+    due_date       = db.Column(db.DateTime, nullable=True)
+    priority       = db.Column(db.String(20), default="normal")  # low, normal, high, critical
+    is_completed   = db.Column(db.Boolean, default=False)
+    completed_at   = db.Column(db.DateTime, nullable=True)
+    notes          = db.Column(db.Text, default="")
+    created_at     = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 class EmailSyncState(db.Model):
     __tablename__ = "email_sync_state"
 

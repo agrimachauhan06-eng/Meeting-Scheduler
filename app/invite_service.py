@@ -164,3 +164,61 @@ class InviteService:
                 logger.error(f"Failed to send reminder to {attendee.email}: {e}")
 
         return sent
+
+    @staticmethod
+    def send_task_notification(task):
+        """Send an email notification for a newly created task/reminder."""
+        if not task.assigned_email:
+            return False
+        smtp_user, smtp_pass, smtp_host, smtp_port = InviteService._get_smtp_creds()
+        if not smtp_user or not smtp_pass:
+            return False
+
+        priority_colors = {
+            "critical": "#F43F5E", "high": "#F59E0B",
+            "normal": "#6366F1", "low": "#9CA3AF",
+        }
+        color = priority_colors.get(task.priority, "#6366F1")
+        due_str = task.due_date.strftime("%B %d, %Y") if task.due_date else "No due date"
+
+        html = f"""
+        <div style="font-family:'Inter',Arial,sans-serif; max-width:520px; margin:0 auto; background:#fff; border-radius:16px; overflow:hidden; border:1px solid #E5E7EB;">
+          <div style="background:linear-gradient(135deg,#6366F1,#7C3AED); padding:28px 32px;">
+            <div style="font-size:13px; font-weight:700; color:rgba(255,255,255,0.7); letter-spacing:1px; text-transform:uppercase; margin-bottom:6px;">Nexus · Action Required</div>
+            <div style="font-size:22px; font-weight:800; color:#fff; line-height:1.3;">{task.title}</div>
+          </div>
+          <div style="padding:28px 32px;">
+            <table style="width:100%; border-collapse:collapse; font-size:13.5px; color:#374151;">
+              <tr><td style="padding:8px 0; color:#6B7280; width:130px;">Assigned to</td>
+                  <td style="padding:8px 0; font-weight:600;">{task.assigned_to or '—'}</td></tr>
+              <tr><td style="padding:8px 0; color:#6B7280;">Priority</td>
+                  <td style="padding:8px 0;">
+                    <span style="background:{color}22; color:{color}; font-weight:700; border-radius:20px; padding:2px 10px; font-size:12px; border:1px solid {color}44;">
+                      {task.priority.upper()}
+                    </span>
+                  </td></tr>
+              <tr><td style="padding:8px 0; color:#6B7280;">Due date</td>
+                  <td style="padding:8px 0; font-weight:600;">{due_str}</td></tr>
+              {'<tr><td style="padding:8px 0; color:#6B7280; vertical-align:top;">Notes</td><td style="padding:8px 0;">' + task.notes + '</td></tr>' if task.notes else ''}
+            </table>
+            <div style="margin-top:24px; padding:14px 18px; background:#F9FAFB; border-radius:10px; font-size:13px; color:#6B7280;">
+              This reminder was created in <strong>Nexus</strong>. Mark it complete once done.
+            </div>
+          </div>
+        </div>
+        """
+
+        try:
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = f"[Nexus] Action item: {task.title}"
+            msg["From"]    = smtp_user
+            msg["To"]      = task.assigned_email
+            msg.attach(MIMEText(html, "html"))
+            with smtplib.SMTP(smtp_host, smtp_port) as server:
+                server.starttls()
+                server.login(smtp_user, smtp_pass)
+                server.sendmail(smtp_user, task.assigned_email, msg.as_string())
+            return True
+        except Exception as e:
+            logger.error(f"Failed to send task notification to {task.assigned_email}: {e}")
+            return False
