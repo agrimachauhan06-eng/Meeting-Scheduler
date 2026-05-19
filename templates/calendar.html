@@ -156,6 +156,29 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         eventDidMount: function(info) {
             var props = info.event.extendedProps;
+            var p = {
+                critical:  { bg: '#FFE4E6', text: '#9F1239', border: '#F43F5E' },
+                high:      { bg: '#FEF3C7', text: '#92400E', border: '#F59E0B' },
+                normal:    { bg: '#E0E7FF', text: '#3730A3', border: '#6366F1' },
+                low:       { bg: '#F3F4F6', text: '#374151', border: '#9CA3AF' },
+            };
+            var key = props.priority || 'normal';
+            if (props.status === 'cancelled') key = 'low';
+            var c = p[key] || p.normal;
+
+            // Set FC CSS vars + inline styles on root + inner element
+            info.el.style.setProperty('--fc-event-bg-color', c.bg);
+            info.el.style.setProperty('--fc-event-border-color', c.border);
+            info.el.style.setProperty('--fc-event-text-color', c.text);
+            info.el.style.backgroundColor = c.bg;
+            info.el.style.color = c.text;
+            info.el.style.borderLeft = '3px solid ' + c.border;
+            info.el.style.borderTop = 'none';
+            info.el.style.borderRight = 'none';
+            info.el.style.borderBottom = 'none';
+            var main = info.el.querySelector('.fc-event-main');
+            if (main) { main.style.backgroundColor = c.bg; main.style.color = c.text; }
+
             var tooltip = info.event.title;
             if (props.location) tooltip += '\n📍 ' + props.location;
             if (props.status)   tooltip += '\n● ' + props.status;
