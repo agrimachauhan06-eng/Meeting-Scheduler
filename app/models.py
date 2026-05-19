@@ -134,6 +134,20 @@ class EmailAccount(db.Model):
         }
 
 
+class CalendarFeed(db.Model):
+    __tablename__ = "calendar_feeds"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False)
+    url = db.Column(db.Text, nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    last_synced = db.Column(db.DateTime, nullable=True)
+    sync_status = db.Column(db.String(20), default="idle")   # idle, ok, error
+    error_message = db.Column(db.Text, default="")
+    events_imported = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 class EmailSyncState(db.Model):
     __tablename__ = "email_sync_state"
 

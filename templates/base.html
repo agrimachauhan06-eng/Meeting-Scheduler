@@ -574,6 +574,10 @@
                 <div class="nav-item-icon"><i class="bi bi-envelope-gear-fill"></i></div>
                 Email Accounts
             </a>
+            <a href="/settings/calendar-feeds" class="nav-item {% if request.endpoint == 'main.calendar_feeds' %}active{% endif %}">
+                <div class="nav-item-icon"><i class="bi bi-calendar3-fill"></i></div>
+                Calendar Feeds
+            </a>
             <a href="/book" target="_blank" class="nav-item {% if request.endpoint == 'main.book_meeting' %}active{% endif %}">
                 <div class="nav-item-icon"><i class="bi bi-calendar2-plus-fill"></i></div>
                 Booking Page

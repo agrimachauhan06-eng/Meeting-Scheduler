@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% block title %}Calendar Feeds — Nexus{% endblock %}
+
+{% block extra_css %}
+<style>
+    .feed-card {
+        background: var(--surface);
+        border: 1.5px solid var(--border);
+        border-radius: var(--r-lg);
+        padding: 20px 22px;
+        margin-bottom: 12px;
+        transition: all 0.2s ease;
+        position: relative; overflow: hidden;
+    }
+    .feed-card:hover { border-color: var(--border-2); box-shadow: var(--shadow); }
+    .feed-card::before {
+        content: '';
+        position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+        background: linear-gradient(180deg, var(--primary), var(--violet));
+        border-radius: 0 2px 2px 0;
+    }
+    .feed-card.error::before { background: var(--rose); }
+    .feed-card.inactive::before { background: var(--text-light); }
+
+    .feed-icon {
+        width: 44px; height: 44px; border-radius: 12px;
+        background: linear-gradient(135deg, var(--primary-soft), var(--violet-soft));
+        border: 1.5px solid var(--border-2);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 20px; flex-shrink: 0;
+    }
+    .feed-name {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 14.5px; font-weight: 700; color: var(--text);
+    }
+    .feed-url {
+        font-size: 11.5px; color: var(--text-muted);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        max-width: 340px;
+    }
+    .feed-meta {
+        display: flex; gap: 14px; flex-wrap: wrap;
+        font-size: 12px; color: var(--text-muted); margin-top: 5px;
+    }
+    .feed-meta span { display: flex; align-items: center; gap: 4px; }
+    .sync-dot {
+        display: inline-block; width: 7px; height: 7px;
+        border-radius: 50%; margin-right: 4px;
+    }
+    .action-btn {
+        display: inline-flex; align-items: center; gap: 5px;
+        padding: 7px 13px; border-radius: 9px;
+        font-size: 12.5px; font-weight: 600; font-family: 'Inter', sans-serif;
+        border: 1.5px solid var(--border-2);
+        background: var(--surface); color: var(--text-muted);
+        cursor: pointer; transition: all 0.18s ease;
+    }
+    .action-btn:hover { background: var(--primary-soft); color: var(--primary); border-color: var(--primary); }
+    .action-btn.danger:hover { background: var(--rose-soft); color: var(--rose); border-color: rgba(244,63,94,0.3); }
+
+    .how-to {
+        background: linear-gradient(135deg, var(--primary-soft) 0%, var(--violet-soft) 100%);
+        border: 1.5px solid var(--border-2);
+        border-radius: var(--r-lg);
+        padding: 20px 24px;
+        margin-bottom: 24px;
+    }
+    .how-to-title {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 13.5px; font-weight: 700; color: var(--primary-dark);
+        margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+    }
+    .how-to ol {
+        padding-left: 18px; margin: 0;
+        font-size: 13px; color: var(--text-2); line-height: 1.9;
+    }
+    .how-to code {
+        background: rgba(99,102,241,0.1); color: var(--primary-dark);
+        border-radius: 5px; padding: 1px 6px; font-size: 12px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">Calendar <span>Feeds</span></div>
+        <div class="page-subtitle">Import events from any iCal URL — Google Calendar, Outlook, Apple Calendar.</div>
+    </div>
+    <button class="btn-primary-nexus" data-bs-toggle="modal" data-bs-target="#addFeedModal">
+        <i class="bi bi-plus-lg"></i> Add Feed
+    </button>
+</div>
+
+<!-- How to get iCal URL -->
+<div class="how-to fade-up">
+    <div class="how-to-title"><i class="bi bi-lightbulb-fill"></i> How to get your Google Calendar iCal URL</div>
+    <ol>
+        <li>Open <strong>Google Calendar</strong> → click the three dots next to your calendar → <strong>Settings</strong></li>
+        <li>Scroll to <strong>"Integrate calendar"</strong> section</li>
+        <li>Copy the <strong>Secret address in iCal format</strong> (starts with <code>https://calendar.google.com/calendar/ical/...</code>)</li>
+        <li>Paste it below and click <strong>Add Feed</strong></li>
+    </ol>
+</div>
+
+{% if feeds %}
+
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+    <div style="font-size:13px; color:var(--text-muted);">
+        <strong style="color:var(--text);">{{ feeds | length }}</strong> feed{{ 's' if feeds|length != 1 }} —
+        <strong style="color:var(--text);">{{ feeds | selectattr('is_active') | list | length }}</strong> active
+    </div>
+    <form method="POST" action="/api/sync-calendar" style="margin:0;">
+        <button type="submit" class="btn-outline-nexus" style="font-size:13px; padding:8px 16px;">
+            <i class="bi bi-arrow-clockwise"></i> Sync All Feeds
+        </button>
+    </form>
+</div>
+
+{% for feed in feeds %}
+<div class="feed-card {% if feed.sync_status == 'error' %}error{% elif not feed.is_active %}inactive{% endif %} fade-up">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+
+        <div style="display:flex; align-items:center; gap:14px; min-width:0; flex:1;">
+            <div class="feed-icon">
+                <i class="bi bi-calendar3-fill" style="color:var(--primary);"></i>
+            </div>
+            <div style="min-width:0;">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:3px; flex-wrap:wrap;">
+                    <span class="feed-name">{{ feed.name }}</span>
+                    {% if not feed.is_active %}
+                    <span style="font-size:10px; font-weight:700; background:#F9FAFB; color:var(--text-muted);
+                        border:1px solid #E5E7EB; border-radius:20px; padding:1px 8px;">PAUSED</span>
+                    {% endif %}
+                </div>
+                <div class="feed-url" title="{{ feed.url }}">{{ feed.url }}</div>
+                <div class="feed-meta">
+                    {% if feed.sync_status == 'ok' %}
+                    <span style="color:var(--emerald);">
+                        <span class="sync-dot" style="background:var(--emerald);"></span> Synced
+                    </span>
+                    {% elif feed.sync_status == 'error' %}
+                    <span style="color:var(--rose);">
+                        <span class="sync-dot" style="background:var(--rose);"></span> Error
+                    </span>
+                    {% else %}
+                    <span>
+                        <span class="sync-dot" style="background:var(--text-light);"></span> Never synced
+                    </span>
+                    {% endif %}
+                    {% if feed.last_synced %}
+                    <span><i class="bi bi-arrow-clockwise"></i> {{ feed.last_synced.strftime('%b %d, %I:%M %p') }}</span>
+                    {% endif %}
+                    {% if feed.events_imported %}
+                    <span><i class="bi bi-calendar-check"></i> {{ feed.events_imported }} event{{ 's' if feed.events_imported != 1 }} imported</span>
+                    {% endif %}
+                </div>
+                {% if feed.error_message %}
+                <div style="font-size:11.5px; color:var(--rose); margin-top:5px; display:flex; align-items:center; gap:5px;">
+                    <i class="bi bi-exclamation-triangle-fill"></i> {{ feed.error_message }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div style="display:flex; gap:7px; flex-wrap:wrap; flex-shrink:0;">
+            <form method="POST" action="/api/sync-calendar-feed/{{ feed.id }}" style="margin:0;">
+                <button type="submit" class="action-btn">
+                    <i class="bi bi-arrow-clockwise"></i> Sync
+                </button>
+            </form>
+            <form method="POST" action="/settings/calendar-feeds/{{ feed.id }}/toggle" style="margin:0;">
+                <button type="submit" class="action-btn">
+                    <i class="bi bi-{{ 'pause-fill' if feed.is_active else 'play-fill' }}"></i>
+                    {{ 'Pause' if feed.is_active else 'Resume' }}
+                </button>
+            </form>
+            <form method="POST" action="/settings/calendar-feeds/{{ feed.id }}/delete" style="margin:0;"
+                  onsubmit="return confirm('Remove this calendar feed?')">
+                <button type="submit" class="action-btn danger">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </form>
+        </div>
+
+    </div>
+</div>
+{% endfor %}
+
+{% else %}
+<div class="empty-state fade-up">
+    <div class="empty-state-art">
+        <i class="bi bi-calendar3" style="font-size:32px; color:var(--primary);"></i>
+    </div>
+    <div class="empty-state-title">No calendar feeds yet</div>
+    <div class="empty-state-text">
+        Add your Google Calendar iCal URL to automatically import<br>
+        your events and keep Nexus in sync.
+    </div>
+    <button class="btn-primary-nexus" data-bs-toggle="modal" data-bs-target="#addFeedModal">
+        <i class="bi bi-plus-lg"></i> Add your first feed
+    </button>
+</div>
+{% endif %}
+
+
+<!-- Add Feed Modal -->
+<div class="modal fade" id="addFeedModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="POST" action="/settings/calendar-feeds/add">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-calendar3-fill" style="color:var(--primary); margin-right:8px;"></i>
+                        Add Calendar Feed
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Feed Name *</label>
+                        <input type="text" name="name" class="form-control" required
+                               placeholder="e.g., My Work Calendar">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">iCal URL *</label>
+                        <input type="url" name="url" class="form-control" required
+                               placeholder="https://calendar.google.com/calendar/ical/...">
+                        <div style="font-size:11.5px; color:var(--text-muted); margin-top:6px; line-height:1.6;">
+                            Works with Google Calendar, Outlook, Apple Calendar, or any .ics URL.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-outline-nexus" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn-primary-nexus">
+                        <i class="bi bi-plus-lg"></i> Add Feed
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

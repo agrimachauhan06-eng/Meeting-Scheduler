@@ -4,7 +4,7 @@ from functools import wraps
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
 
 from app import db
-from app.models import Meeting, Reminder, EmailAccount
+from app.models import Meeting, Reminder, EmailAccount, CalendarFeed
 from app.meeting_manager import MeetingManager
 from app.invite_service import InviteService
 
@@ -483,3 +483,152 @@ def api_booking_slots():
 
     slots = _get_available_slots(date, duration)
     return jsonify({"slots": slots})
+
+
+# --- iCal Calendar Feeds ---
+
+def _sync_feed(feed):
+    """Fetch + parse an iCal URL, import new events. Returns count imported."""
+    import urllib.request
+    from icalendar import Calendar as ICal
+    from datetime import date as date_type
+
+    try:
+        req = urllib.request.Request(feed.url, headers={"User-Agent": "Nexus/1.0"})
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            raw = resp.read()
+    except Exception as e:
+        raise RuntimeError(f"Could not fetch URL: {e}")
+
+    try:
+        cal = ICal.from_ical(raw)
+    except Exception as e:
+        raise RuntimeError(f"Invalid iCal data: {e}")
+
+    imported = 0
+    for component in cal.walk():
+        if component.name != "VEVENT":
+            continue
+
+        uid = str(component.get("UID", "")).strip()
+        summary = str(component.get("SUMMARY", "Untitled Event")).strip()
+
+        dtstart = component.get("DTSTART")
+        dtend   = component.get("DTEND") or component.get("DTSTART")
+        if not dtstart:
+            continue
+
+        start_dt = dtstart.dt
+        end_dt   = dtend.dt if dtend else dtstart.dt
+
+        # All-day event → convert date to datetime
+        if isinstance(start_dt, date_type) and not isinstance(start_dt, datetime):
+            start_dt = datetime(start_dt.year, start_dt.month, start_dt.day, 9, 0, 0)
+        if isinstance(end_dt, date_type) and not isinstance(end_dt, datetime):
+            end_dt = datetime(end_dt.year, end_dt.month, end_dt.day, 10, 0, 0)
+
+        # Strip timezone info (store as UTC-naive)
+        if hasattr(start_dt, "tzinfo") and start_dt.tzinfo:
+            start_dt = start_dt.replace(tzinfo=None)
+        if hasattr(end_dt, "tzinfo") and end_dt.tzinfo:
+            end_dt = end_dt.replace(tzinfo=None)
+
+        # Deduplicate by calendar_uid
+        if uid and Meeting.query.filter_by(calendar_uid=uid).first():
+            continue
+
+        description = str(component.get("DESCRIPTION", "")).strip()
+        location    = str(component.get("LOCATION", "")).strip()
+
+        MeetingManager.create_meeting(
+            title=summary,
+            start_time=start_dt,
+            end_time=end_dt,
+            description=description,
+            location=location,
+            source="ical",
+            calendar_uid=uid,
+        )
+        imported += 1
+
+    feed.last_synced    = datetime.utcnow()
+    feed.sync_status    = "ok"
+    feed.error_message  = ""
+    feed.events_imported = (feed.events_imported or 0) + imported
+    db.session.commit()
+    return imported
+
+
+@main_bp.route("/settings/calendar-feeds")
+def calendar_feeds():
+    feeds = CalendarFeed.query.order_by(CalendarFeed.created_at.desc()).all()
+    return render_template("calendar_feeds.html", feeds=feeds)
+
+
+@main_bp.route("/settings/calendar-feeds/add", methods=["POST"])
+def add_calendar_feed():
+    name = request.form.get("name", "").strip()
+    url  = request.form.get("url", "").strip()
+    if not name or not url:
+        flash("Name and URL are required.", "error")
+        return redirect(url_for("main.calendar_feeds"))
+    if not url.startswith("http"):
+        flash("URL must start with http:// or https://", "error")
+        return redirect(url_for("main.calendar_feeds"))
+
+    feed = CalendarFeed(name=name, url=url)
+    db.session.add(feed)
+    db.session.commit()
+    flash(f"Calendar feed '{name}' added. Click Sync to import events.", "success")
+    return redirect(url_for("main.calendar_feeds"))
+
+
+@main_bp.route("/settings/calendar-feeds/<int:feed_id>/delete", methods=["POST"])
+def delete_calendar_feed(feed_id):
+    feed = CalendarFeed.query.get(feed_id)
+    if feed:
+        db.session.delete(feed)
+        db.session.commit()
+        flash(f"Feed '{feed.name}' removed.", "info")
+    return redirect(url_for("main.calendar_feeds"))
+
+
+@main_bp.route("/settings/calendar-feeds/<int:feed_id>/toggle", methods=["POST"])
+def toggle_calendar_feed(feed_id):
+    feed = CalendarFeed.query.get(feed_id)
+    if feed:
+        feed.is_active = not feed.is_active
+        db.session.commit()
+    return redirect(url_for("main.calendar_feeds"))
+
+
+@main_bp.route("/api/sync-calendar-feed/<int:feed_id>", methods=["POST"])
+def api_sync_calendar_feed(feed_id):
+    feed = CalendarFeed.query.get(feed_id)
+    if not feed:
+        flash("Feed not found.", "error")
+        return redirect(url_for("main.calendar_feeds"))
+    try:
+        count = _sync_feed(feed)
+        flash(f"Synced {count} new event(s) from '{feed.name}'.", "success")
+    except Exception as e:
+        feed.sync_status   = "error"
+        feed.error_message = str(e)[:255]
+        db.session.commit()
+        flash(f"Sync failed: {e}", "error")
+    return redirect(url_for("main.calendar_feeds"))
+
+
+@main_bp.route("/api/sync-calendar", methods=["POST"])
+def api_sync_all_calendars():
+    feeds = CalendarFeed.query.filter_by(is_active=True).all()
+    total = 0
+    errors = []
+    for feed in feeds:
+        try:
+            total += _sync_feed(feed)
+        except Exception as e:
+            errors.append(str(e))
+    if errors:
+        return jsonify({"synced": total, "errors": errors}), 207
+    return jsonify({"synced": total})
