@@ -25,5 +25,18 @@ def create_app():
 
     with app.app_context():
         db.create_all()
+        _migrate_calendar_feeds(db)
 
     return app
+
+
+def _migrate_calendar_feeds(db):
+    """Add owner_name / owner_email columns if they don't exist yet."""
+    from sqlalchemy import text
+    with db.engine.connect() as conn:
+        for col, coltype in [("owner_name", "VARCHAR(255)"), ("owner_email", "VARCHAR(255)")]:
+            try:
+                conn.execute(text(f"ALTER TABLE calendar_feeds ADD COLUMN {col} {coltype} DEFAULT ''"))
+                conn.commit()
+            except Exception:
+                pass  # column already exists

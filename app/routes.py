@@ -59,31 +59,48 @@ def team_availability():
         Meeting.status != "cancelled",
     ).all()
 
+    def _meeting_block(meeting):
+        start_mins    = (meeting.start_time.hour - WORK_START) * 60 + meeting.start_time.minute
+        duration_mins = max(15, int((meeting.end_time - meeting.start_time).total_seconds() / 60))
+        top_pct    = max(0, round(start_mins / TOTAL_MINS * 100, 2))
+        height_pct = min(round(duration_mins / TOTAL_MINS * 100, 2), 100 - top_pct)
+        return {
+            "id":         meeting.id,
+            "title":      meeting.title,
+            "start":      meeting.start_time.strftime("%I:%M %p"),
+            "end":        meeting.end_time.strftime("%I:%M %p"),
+            "top_pct":    top_pct,
+            "height_pct": max(height_pct, 4),
+        }
+
     # Build per-person data keyed by email
     people = {}
+    unassigned_days = {d.isoformat(): [] for d in week_days}
+
     for meeting in meetings:
-        for att in meeting.attendees:
-            email = att.email.lower().strip()
-            if email not in people:
-                people[email] = {
-                    "name":  att.name or email.split("@")[0].title(),
-                    "email": email,
-                    "days":  {d.isoformat(): [] for d in week_days},
-                }
-            day_key = meeting.start_time.date().isoformat()
-            if day_key in people[email]["days"]:
-                start_mins    = (meeting.start_time.hour - WORK_START) * 60 + meeting.start_time.minute
-                duration_mins = max(15, int((meeting.end_time - meeting.start_time).total_seconds() / 60))
-                top_pct    = max(0, round(start_mins / TOTAL_MINS * 100, 2))
-                height_pct = min(round(duration_mins / TOTAL_MINS * 100, 2), 100 - top_pct)
-                people[email]["days"][day_key].append({
-                    "id":         meeting.id,
-                    "title":      meeting.title,
-                    "start":      meeting.start_time.strftime("%I:%M %p"),
-                    "end":        meeting.end_time.strftime("%I:%M %p"),
-                    "top_pct":    top_pct,
-                    "height_pct": max(height_pct, 4),  # min visible height
-                })
+        day_key = meeting.start_time.date().isoformat()
+        if meeting.attendees:
+            for att in meeting.attendees:
+                email = att.email.lower().strip()
+                if email not in people:
+                    people[email] = {
+                        "name":  att.name or email.split("@")[0].title(),
+                        "email": email,
+                        "days":  {d.isoformat(): [] for d in week_days},
+                    }
+                if day_key in people[email]["days"]:
+                    people[email]["days"][day_key].append(_meeting_block(meeting))
+        else:
+            if day_key in unassigned_days:
+                unassigned_days[day_key].append(_meeting_block(meeting))
+
+    # Add "Unassigned" row if there are any no-attendee meetings this week
+    if any(unassigned_days[d.isoformat()] for d in week_days):
+        people["__unassigned__"] = {
+            "name":  "Unassigned",
+            "email": "__unassigned__",
+            "days":  unassigned_days,
+        }
 
     # Find best free slots (everyone free for ≥30 min)
     all_emails = list(people.keys())
@@ -688,10 +705,9 @@ def _sync_feed(feed):
                 ical_attendees.append({"name": att_cn, "email": att_email})
                 seen_emails.add(att_email)
 
-        # Fall back to feed name so meeting shows up under the feed owner
-        if not ical_attendees:
-            feed_email = f"{feed.name.lower().replace(' ', '.')}@feed"
-            ical_attendees = [{"name": feed.name, "email": feed_email}]
+        # Fall back to feed owner (if set) so meeting shows under the right person
+        if not ical_attendees and feed.owner_email:
+            ical_attendees = [{"name": feed.owner_name or feed.name, "email": feed.owner_email}]
 
         # Deduplicate by calendar_uid — backfill attendees if missing on existing meeting
         if uid:
@@ -746,7 +762,9 @@ def add_calendar_feed():
         flash("URL must start with http:// or https://", "error")
         return redirect(url_for("main.calendar_feeds"))
 
-    feed = CalendarFeed(name=name, url=url)
+    owner_name  = request.form.get("owner_name", "").strip()
+    owner_email = request.form.get("owner_email", "").strip()
+    feed = CalendarFeed(name=name, url=url, owner_name=owner_name, owner_email=owner_email)
     db.session.add(feed)
     db.session.commit()
     flash(f"Calendar feed '{name}' added. Click Sync to import events.", "success")

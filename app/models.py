@@ -140,6 +140,8 @@ class CalendarFeed(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), nullable=False)
     url = db.Column(db.Text, nullable=False)
+    owner_name = db.Column(db.String(255), default="")   # person whose calendar this is
+    owner_email = db.Column(db.String(255), default="")  # their email
     is_active = db.Column(db.Boolean, default=True)
     last_synced = db.Column(db.DateTime, nullable=True)
     sync_status = db.Column(db.String(20), default="idle")   # idle, ok, error
