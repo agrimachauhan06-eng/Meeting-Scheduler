@@ -37,6 +37,116 @@ def calendar_view():
     return render_template("calendar.html")
 
 
+@main_bp.route("/availability")
+def team_availability():
+    from app.models import Attendee
+
+    WORK_START = 8   # 8am
+    WORK_END   = 20  # 8pm
+    TOTAL_MINS = (WORK_END - WORK_START) * 60
+
+    week_offset = request.args.get("week", 0, type=int)
+    today       = datetime.utcnow().date()
+    week_start  = today - timedelta(days=today.weekday()) + timedelta(weeks=week_offset)
+    week_days   = [week_start + timedelta(days=i) for i in range(5)]  # Mon–Fri
+
+    # All meetings in this week
+    wk_start_dt = datetime(week_start.year, week_start.month, week_start.day)
+    wk_end_dt   = wk_start_dt + timedelta(days=5)
+    meetings = Meeting.query.filter(
+        Meeting.start_time >= wk_start_dt,
+        Meeting.start_time <  wk_end_dt,
+        Meeting.status != "cancelled",
+    ).all()
+
+    # Build per-person data keyed by email
+    people = {}
+    for meeting in meetings:
+        for att in meeting.attendees:
+            email = att.email.lower().strip()
+            if email not in people:
+                people[email] = {
+                    "name":  att.name or email.split("@")[0].title(),
+                    "email": email,
+                    "days":  {d.isoformat(): [] for d in week_days},
+                }
+            day_key = meeting.start_time.date().isoformat()
+            if day_key in people[email]["days"]:
+                start_mins    = (meeting.start_time.hour - WORK_START) * 60 + meeting.start_time.minute
+                duration_mins = max(15, int((meeting.end_time - meeting.start_time).total_seconds() / 60))
+                top_pct    = max(0, round(start_mins / TOTAL_MINS * 100, 2))
+                height_pct = min(round(duration_mins / TOTAL_MINS * 100, 2), 100 - top_pct)
+                people[email]["days"][day_key].append({
+                    "id":         meeting.id,
+                    "title":      meeting.title,
+                    "start":      meeting.start_time.strftime("%I:%M %p"),
+                    "end":        meeting.end_time.strftime("%I:%M %p"),
+                    "top_pct":    top_pct,
+                    "height_pct": max(height_pct, 4),  # min visible height
+                })
+
+    # Find best free slots (everyone free for ≥30 min)
+    all_emails = list(people.keys())
+    best_slots = []
+    if all_emails:
+        for day in week_days:
+            day_key = day.isoformat()
+            # Build blocked intervals for ALL people on this day
+            blocked = []
+            for p in people.values():
+                for m in p["days"][day_key]:
+                    # convert back from pct to minutes
+                    s = int(m["top_pct"]    / 100 * TOTAL_MINS)
+                    e = int((m["top_pct"] + m["height_pct"]) / 100 * TOTAL_MINS)
+                    blocked.append((s, e))
+            blocked.sort()
+
+            # Merge overlapping blocks
+            merged = []
+            for s, e in blocked:
+                if merged and s <= merged[-1][1]:
+                    merged[-1] = (merged[-1][0], max(merged[-1][1], e))
+                else:
+                    merged.append([s, e])
+
+            # Find gaps ≥30 min
+            prev = 0
+            for s, e in merged:
+                if s - prev >= 30:
+                    slot_start = WORK_START * 60 + prev
+                    slot_end   = WORK_START * 60 + s
+                    best_slots.append({
+                        "day":   day.strftime("%a %b %d"),
+                        "start": f"{slot_start//60:02d}:{slot_start%60:02d}",
+                        "end":   f"{slot_end//60:02d}:{slot_end%60:02d}",
+                        "mins":  s - prev,
+                    })
+                prev = e
+            # gap after last block
+            if TOTAL_MINS - prev >= 30:
+                slot_start = WORK_START * 60 + prev
+                best_slots.append({
+                    "day":   day.strftime("%a %b %d"),
+                    "start": f"{slot_start//60:02d}:{slot_start%60:02d}",
+                    "end":   f"{WORK_END:02d}:00",
+                    "mins":  TOTAL_MINS - prev,
+                })
+
+    # Hour labels for the grid
+    hour_labels = [f"{h:02d}:00" for h in range(WORK_START, WORK_END + 1)]
+
+    return render_template(
+        "availability.html",
+        people=list(people.values()),
+        week_days=week_days,
+        week_offset=week_offset,
+        hour_labels=hour_labels,
+        best_slots=best_slots[:8],  # top 8 slots
+        WORK_START=WORK_START,
+        TOTAL_MINS=TOTAL_MINS,
+    )
+
+
 @main_bp.route("/meetings")
 def meetings_list():
     MeetingManager.auto_complete_past_meetings()

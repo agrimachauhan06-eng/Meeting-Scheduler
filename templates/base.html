@@ -569,6 +569,10 @@
                 <div class="nav-item-icon"><i class="bi bi-plus-lg"></i></div>
                 New Meeting
             </a>
+            <a href="/availability" class="nav-item {% if request.endpoint == 'main.team_availability' %}active{% endif %}">
+                <div class="nav-item-icon"><i class="bi bi-people-fill"></i></div>
+                Team Availability
+            </a>
             <div class="nav-group-label">Settings</div>
             <a href="/settings/emails" class="nav-item {% if request.endpoint == 'main.email_accounts' %}active{% endif %}">
                 <div class="nav-item-icon"><i class="bi bi-envelope-gear-fill"></i></div>

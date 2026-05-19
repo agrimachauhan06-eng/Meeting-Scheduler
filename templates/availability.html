@@ -1,0 +1,347 @@
+{% extends "base.html" %}
+{% block title %}Team Availability — Nexus{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ── WEEK NAV ── */
+    .week-nav {
+        display: flex; align-items: center; gap: 12px;
+    }
+    .week-label {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 15px; font-weight: 700; color: var(--text);
+        min-width: 180px; text-align: center;
+    }
+    .nav-arrow {
+        width: 34px; height: 34px; border-radius: 9px;
+        border: 1.5px solid var(--border-2); background: var(--surface);
+        display: flex; align-items: center; justify-content: center;
+        color: var(--text-muted); cursor: pointer; text-decoration: none;
+        transition: all 0.18s ease; font-size: 14px;
+        box-shadow: var(--shadow-sm);
+    }
+    .nav-arrow:hover { background: var(--primary-soft); color: var(--primary); border-color: var(--primary); }
+
+    /* ── BEST SLOTS ── */
+    .best-slots-wrap {
+        background: linear-gradient(135deg, var(--emerald-soft), #F0FFF4);
+        border: 1.5px solid rgba(5,150,105,0.15);
+        border-radius: var(--r-lg);
+        padding: 18px 22px;
+        margin-bottom: 24px;
+    }
+    .best-slots-title {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 13px; font-weight: 700; color: var(--emerald);
+        margin-bottom: 12px; display: flex; align-items: center; gap: 7px;
+        text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .slot-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .slot-chip {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 6px 13px; border-radius: 20px;
+        background: white; border: 1.5px solid rgba(5,150,105,0.2);
+        font-size: 12.5px; font-weight: 600; color: var(--emerald);
+        cursor: pointer; transition: all 0.18s ease;
+        text-decoration: none;
+    }
+    .slot-chip:hover {
+        background: var(--emerald); color: white;
+        border-color: var(--emerald);
+        box-shadow: 0 4px 12px rgba(5,150,105,0.25);
+        transform: translateY(-1px);
+    }
+    .slot-chip span { color: inherit; font-size: 11px; opacity: 0.8; font-weight: 500; }
+
+    /* ── GRID ── */
+    .avail-grid-wrap {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--r-xl);
+        overflow: hidden;
+        box-shadow: var(--shadow);
+    }
+
+    .grid-header {
+        display: grid;
+        border-bottom: 2px solid var(--border);
+    }
+    .grid-corner {
+        padding: 12px 16px;
+        font-size: 11px; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.8px; color: var(--text-light);
+        border-right: 1px solid var(--border);
+        background: var(--surface-2);
+        display: flex; align-items: center;
+    }
+    .grid-day-header {
+        padding: 12px 10px;
+        text-align: center;
+        border-right: 1px solid var(--border);
+        background: var(--surface-2);
+    }
+    .grid-day-header:last-child { border-right: none; }
+    .day-name {
+        font-size: 11px; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.8px; color: var(--text-muted);
+        margin-bottom: 2px;
+    }
+    .day-date {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 18px; font-weight: 800; color: var(--text);
+        line-height: 1;
+    }
+    .day-date.today {
+        background: linear-gradient(135deg, var(--primary), var(--violet));
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    /* ── PERSON ROW ── */
+    .grid-body { display: flex; flex-direction: column; }
+    .person-row {
+        display: grid;
+        border-bottom: 1px solid var(--border);
+        min-height: 90px;
+    }
+    .person-row:last-child { border-bottom: none; }
+
+    .person-cell {
+        padding: 14px 16px;
+        border-right: 1px solid var(--border);
+        background: var(--surface);
+        display: flex; align-items: flex-start; gap: 10px;
+        position: sticky; left: 0; z-index: 2;
+    }
+    .person-avatar {
+        width: 32px; height: 32px; border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary), var(--violet));
+        display: flex; align-items: center; justify-content: center;
+        font-size: 12px; font-weight: 700; color: white;
+        flex-shrink: 0;
+    }
+    .person-name { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.3; }
+    .person-email { font-size: 11px; color: var(--text-muted); }
+
+    /* ── DAY CELL ── */
+    .day-cell {
+        position: relative;
+        border-right: 1px solid var(--border);
+        background: var(--surface);
+        min-height: 90px;
+        overflow: hidden;
+    }
+    .day-cell:last-child { border-right: none; }
+    .day-cell.today-col { background: var(--primary-soft); }
+
+    /* Hour lines */
+    .day-cell::before {
+        content: '';
+        position: absolute; inset: 0;
+        background-image: repeating-linear-gradient(
+            to bottom,
+            transparent,
+            transparent calc(100% / 12 - 1px),
+            var(--border) calc(100% / 12 - 1px),
+            var(--border) calc(100% / 12)
+        );
+        pointer-events: none; z-index: 0;
+    }
+
+    /* ── MEETING BLOCK ── */
+    .meeting-block {
+        position: absolute; left: 4px; right: 4px;
+        border-radius: 6px;
+        padding: 3px 6px;
+        font-size: 11px; font-weight: 600;
+        cursor: pointer; z-index: 1;
+        overflow: hidden;
+        transition: all 0.15s ease;
+        text-decoration: none; display: block;
+        line-height: 1.3;
+    }
+    .meeting-block:hover { filter: brightness(0.92); transform: scaleX(0.97); z-index: 3; }
+    .meeting-block-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .meeting-block-time { font-size: 10px; font-weight: 500; opacity: 0.8; }
+
+    /* Color palette for meeting blocks - cycles by index */
+    .mb-0 { background: rgba(99,102,241,0.15); color: var(--primary-dark); border-left: 3px solid var(--primary); }
+    .mb-1 { background: rgba(124,58,237,0.13); color: #5B21B6; border-left: 3px solid var(--violet); }
+    .mb-2 { background: rgba(5,150,105,0.13); color: #065F46; border-left: 3px solid var(--emerald); }
+    .mb-3 { background: rgba(245,158,11,0.15); color: #92400E; border-left: 3px solid var(--amber); }
+    .mb-4 { background: rgba(244,63,94,0.13); color: #9F1239; border-left: 3px solid var(--rose); }
+
+    /* ── TIME RULER ── */
+    .time-ruler {
+        position: absolute; top: 0; right: 0; bottom: 0;
+        width: 36px; pointer-events: none; z-index: 1;
+    }
+
+    /* ── EMPTY STATE ── */
+    .no-team {
+        text-align: center; padding: 60px 24px; color: var(--text-muted);
+    }
+    .no-team-art {
+        width: 72px; height: 72px; border-radius: 18px;
+        background: linear-gradient(135deg, var(--primary-soft), var(--violet-soft));
+        display: flex; align-items: center; justify-content: center;
+        font-size: 30px; margin: 0 auto 18px;
+        box-shadow: var(--shadow);
+    }
+    .no-team-title { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 16px; font-weight: 700; color: var(--text-2); margin-bottom: 8px; }
+    .no-team-text { font-size: 13px; line-height: 1.6; max-width: 340px; margin: 0 auto 20px; }
+
+    /* Scrollable on small screens */
+    .avail-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+    /* Hour labels column */
+    .hour-labels-col { display: flex; flex-direction: column; justify-content: space-between; height: 100%; padding: 0 6px; }
+    .hour-lbl { font-size: 9.5px; color: var(--text-light); font-weight: 600; line-height: 1; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Team <span>Availability</span></div>
+        <div class="page-subtitle">See who's free and find the best time for everyone.</div>
+    </div>
+    <div class="week-nav">
+        <a href="?week={{ week_offset - 1 }}" class="nav-arrow"><i class="bi bi-chevron-left"></i></a>
+        <div class="week-label">
+            {{ week_days[0].strftime('%b %d') }} – {{ week_days[-1].strftime('%b %d, %Y') }}
+        </div>
+        <a href="?week={{ week_offset + 1 }}" class="nav-arrow"><i class="bi bi-chevron-right"></i></a>
+        {% if week_offset != 0 %}
+        <a href="?week=0" class="btn-outline-nexus" style="padding:7px 14px; font-size:13px;">Today</a>
+        {% endif %}
+    </div>
+</div>
+
+{% if people %}
+
+    <!-- Best Free Slots -->
+    {% if best_slots %}
+    <div class="best-slots-wrap fade-up">
+        <div class="best-slots-title">
+            <i class="bi bi-stars"></i> Best free windows this week
+        </div>
+        <div class="slot-chips">
+            {% for s in best_slots %}
+            <a href="/meetings/new?start={{ week_days[loop.index0 % 5].isoformat() }}T{{ s.start }}"
+               class="slot-chip">
+                <i class="bi bi-calendar-plus"></i>
+                <strong>{{ s.day }}</strong>
+                {{ s.start }} – {{ s.end }}
+                <span>({{ s.mins }}m free)</span>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Grid -->
+    <div class="avail-scroll fade-up" style="animation-delay:0.08s;">
+    <div class="avail-grid-wrap" style="min-width:700px;">
+
+        <!-- Header -->
+        {% set col_count = week_days | length + 1 %}
+        <div class="grid-header" style="grid-template-columns: 160px repeat({{ week_days|length }}, 1fr);">
+            <div class="grid-corner"><i class="bi bi-people-fill" style="margin-right:6px; color:var(--primary);"></i> Team</div>
+            {% set today_iso = now.strftime('%Y-%m-%d') if now is defined else "" %}
+            {% for day in week_days %}
+            <div class="grid-day-header">
+                <div class="day-name">{{ day.strftime('%a') }}</div>
+                <div class="day-date {% if day.isoformat() == today_iso %}today{% endif %}">{{ day.day }}</div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Body -->
+        <div class="grid-body">
+            {% for person in people %}
+            <div class="person-row" style="grid-template-columns: 160px repeat({{ week_days|length }}, 1fr);">
+
+                <!-- Person label -->
+                <div class="person-cell">
+                    <div class="person-avatar">{{ person.name[0] | upper }}</div>
+                    <div>
+                        <div class="person-name">{{ person.name }}</div>
+                        <div class="person-email">{{ person.email.split('@')[0] }}</div>
+                    </div>
+                </div>
+
+                <!-- Day cells -->
+                {% for day in week_days %}
+                {% set day_key = day.isoformat() %}
+                {% set day_meetings = person.days[day_key] %}
+                <div class="day-cell {% if day.isoformat() == today_iso %}today-col{% endif %}"
+                     style="height:160px; cursor:pointer;"
+                     onclick="window.location='/meetings/new?start={{ day.isoformat() }}T09:00'">
+                    {% for m in day_meetings %}
+                    <a href="/meetings/{{ m.id }}" class="meeting-block mb-{{ loop.index0 % 5 }}"
+                       style="top:{{ m.top_pct }}%; height:{{ m.height_pct }}%;"
+                       onclick="event.stopPropagation();"
+                       title="{{ m.title }} · {{ m.start }} – {{ m.end }}">
+                        <div class="meeting-block-title">{{ m.title }}</div>
+                        {% if m.height_pct > 6 %}
+                        <div class="meeting-block-time">{{ m.start }}</div>
+                        {% endif %}
+                    </a>
+                    {% endfor %}
+                    {% if not day_meetings %}
+                    <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;">
+                        <i class="bi bi-plus" style="font-size:16px; color:var(--border-2); transition:all 0.15s;"></i>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Hour legend strip -->
+        <div style="display:grid; grid-template-columns:160px repeat({{ week_days|length }},1fr);
+                    border-top:1px solid var(--border); background:var(--surface-2); padding:6px 0;">
+            <div style="padding:0 12px;">
+                <div class="hour-labels-col">
+                    {% for h in hour_labels %}
+                    <div class="hour-lbl">{{ h }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% for _ in week_days %}
+            <div></div>
+            {% endfor %}
+        </div>
+
+    </div>
+    </div>
+
+    <div style="margin-top:14px; font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:6px;">
+        <i class="bi bi-info-circle"></i>
+        Click any empty cell to schedule a meeting at that time. Click a meeting block to view details.
+        Grid shows 8AM – 8PM. Only people with meetings this week appear.
+    </div>
+
+{% else %}
+
+    <div class="no-team fade-up">
+        <div class="no-team-art"><i class="bi bi-people" style="font-size:28px; color:var(--primary);"></i></div>
+        <div class="no-team-title">No team activity this week</div>
+        <div class="no-team-text">
+            Team members appear here once they're added as attendees to meetings.
+            Try navigating to a different week, or
+            <a href="/meetings/new" style="color:var(--primary); font-weight:600;">schedule a meeting</a> and add attendees.
+        </div>
+        <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+            <a href="?week={{ week_offset - 1 }}" class="btn-outline-nexus"><i class="bi bi-chevron-left"></i> Previous week</a>
+            <a href="/meetings/new" class="btn-primary-nexus"><i class="bi bi-plus-lg"></i> New Meeting</a>
+        </div>
+    </div>
+
+{% endif %}
+
+{% endblock %}
