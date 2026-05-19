@@ -144,15 +144,17 @@ document.addEventListener('DOMContentLoaded', function() {
             var props = info.event.extendedProps;
             // Color by priority
             var colors = {
-                critical: { bg: '#F43F5E', border: '#E11D48' },
-                high:     { bg: '#F59E0B', border: '#D97706' },
-                low:      { bg: '#9CA3AF', border: '#6B7280' },
-                normal:   { bg: '#6366F1', border: '#4F46E5' }
+                critical: { bg: 'rgba(244,63,94,0.13)',  text: '#9F1239', border: '#F43F5E' },
+                high:     { bg: 'rgba(245,158,11,0.13)', text: '#92400E', border: '#F59E0B' },
+                low:      { bg: 'rgba(156,163,175,0.18)',text: '#374151', border: '#9CA3AF' },
+                normal:   { bg: 'rgba(99,102,241,0.13)', text: '#3730A3', border: '#6366F1' }
             };
             var p = props.priority || 'normal';
             var c = colors[p] || colors.normal;
             info.el.style.backgroundColor = c.bg;
-            info.el.style.borderLeftColor = c.border;
+            info.el.style.color = c.text;
+            info.el.style.borderLeft = '3px solid ' + c.border;
+            info.el.style.borderRadius = '5px';
 
             var tooltip = info.event.title;
             if (props.location) tooltip += '\n📍 ' + props.location;
