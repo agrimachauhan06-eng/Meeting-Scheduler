@@ -234,7 +234,7 @@
                 <i class="bi bi-calendar-plus"></i>
                 <strong>{{ s.day }}</strong>
                 {{ s.start }} – {{ s.end }}
-                <span>({{ s.mins }}m free)</span>
+                <span>({% if s.mins >= 60 %}{{ s.mins // 60 }}h{% if s.mins % 60 %} {{ s.mins % 60 }}m{% endif %}{% else %}{{ s.mins }}m{% endif %} free)</span>
             </a>
             {% endfor %}
         </div>
