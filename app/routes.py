@@ -658,12 +658,55 @@ def _sync_feed(feed):
         if hasattr(end_dt, "tzinfo") and end_dt.tzinfo:
             end_dt = end_dt.replace(tzinfo=None)
 
-        # Deduplicate by calendar_uid
-        if uid and Meeting.query.filter_by(calendar_uid=uid).first():
-            continue
-
         description = str(component.get("DESCRIPTION", "")).strip()
         location    = str(component.get("LOCATION", "")).strip()
+        organizer_str = ""
+
+        # Parse iCal ORGANIZER
+        ical_attendees = []
+        org_prop = component.get("ORGANIZER")
+        if org_prop:
+            org_email = str(org_prop).replace("mailto:", "").strip()
+            org_cn = ""
+            if hasattr(org_prop, "params"):
+                org_cn = str(org_prop.params.get("CN", "")).strip()
+            organizer_str = org_cn or org_email
+            if "@" in org_email:
+                ical_attendees.append({"name": org_cn, "email": org_email})
+
+        # Parse iCal ATTENDEE(s) — may be a list or single value
+        att_props = component.get("ATTENDEE") or []
+        if not isinstance(att_props, list):
+            att_props = [att_props]
+        seen_emails = {a["email"] for a in ical_attendees}
+        for att_prop in att_props:
+            att_email = str(att_prop).replace("mailto:", "").strip()
+            att_cn = ""
+            if hasattr(att_prop, "params"):
+                att_cn = str(att_prop.params.get("CN", "")).strip()
+            if "@" in att_email and att_email not in seen_emails:
+                ical_attendees.append({"name": att_cn, "email": att_email})
+                seen_emails.add(att_email)
+
+        # Fall back to feed name so meeting shows up under the feed owner
+        if not ical_attendees:
+            feed_email = f"{feed.name.lower().replace(' ', '.')}@feed"
+            ical_attendees = [{"name": feed.name, "email": feed_email}]
+
+        # Deduplicate by calendar_uid — backfill attendees if missing on existing meeting
+        if uid:
+            existing = Meeting.query.filter_by(calendar_uid=uid).first()
+            if existing:
+                if not existing.attendees and ical_attendees:
+                    from app.models import Attendee as AttendeeModel
+                    for att in ical_attendees:
+                        db.session.add(AttendeeModel(
+                            meeting_id=existing.id,
+                            name=att.get("name", ""),
+                            email=att.get("email", ""),
+                        ))
+                    db.session.commit()
+                continue
 
         MeetingManager.create_meeting(
             title=summary,
@@ -671,8 +714,10 @@ def _sync_feed(feed):
             end_time=end_dt,
             description=description,
             location=location,
+            organizer=organizer_str,
             source="ical",
             calendar_uid=uid,
+            attendees=ical_attendees,
         )
         imported += 1
 
