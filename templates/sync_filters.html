@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}Sync Filters — Nexus{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-chip {
+        display: inline-flex; align-items: center; gap: 8px;
+        background: var(--surface); border: 1.5px solid var(--border);
+        border-radius: 30px; padding: 7px 14px;
+        transition: all 0.18s ease;
+    }
+    .filter-chip:hover { border-color: var(--border-2); box-shadow: var(--shadow-sm); }
+    .filter-chip.inactive { opacity: 0.45; }
+    .filter-kw {
+        font-size: 13.5px; font-weight: 700; color: var(--text);
+        font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .filter-kw.inactive { color: var(--text-muted); }
+    .chip-btn {
+        background: none; border: none; cursor: pointer;
+        color: var(--text-muted); font-size: 13px; padding: 2px 4px;
+        border-radius: 5px; line-height: 1; transition: all 0.15s ease;
+        font-family: 'Inter', sans-serif;
+    }
+    .chip-btn:hover { color: var(--rose); background: var(--rose-soft); }
+    .chip-btn.pause:hover { color: var(--amber); background: var(--amber-soft); }
+
+    .danger-zone {
+        border: 1.5px solid rgba(244,63,94,0.2);
+        border-radius: var(--r-lg);
+        padding: 20px 24px;
+        background: var(--rose-soft);
+    }
+    .danger-title {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 14px; font-weight: 700; color: var(--rose);
+        margin-bottom: 6px; display: flex; align-items: center; gap: 7px;
+    }
+    .danger-desc { font-size: 13px; color: #9F1239; line-height: 1.6; margin-bottom: 14px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">Sync <span>Filters</span></div>
+        <div class="page-subtitle">Block meetings with certain keywords from being imported during iCal sync.</div>
+    </div>
+</div>
+
+<div class="row g-4">
+
+    <!-- Left: Add keyword + current list -->
+    <div class="col-lg-7">
+
+        <!-- Add keyword form -->
+        <div class="card-nexus p-4 mb-4 fade-up">
+            <div class="section-label"><i class="bi bi-plus-circle-fill" style="color:var(--primary);"></i> Add blocked keyword</div>
+            <form method="POST" action="/settings/sync-filters/add" style="display:flex; gap:10px; flex-wrap:wrap;">
+                <input type="text" name="keyword" class="form-control" required
+                       placeholder="e.g. lunch, focus time, OOO, holiday..."
+                       style="flex:1; min-width:200px;"
+                       autocomplete="off">
+                <button type="submit" class="btn-primary-nexus" style="flex-shrink:0;">
+                    <i class="bi bi-plus-lg"></i> Add
+                </button>
+            </form>
+            <div style="font-size:12px; color:var(--text-muted); margin-top:8px; line-height:1.6;">
+                <i class="bi bi-info-circle"></i>
+                Keywords are case-insensitive. "lunch" will also block "Team Lunch", "Lunch Break", etc.
+            </div>
+        </div>
+
+        <!-- Active keywords -->
+        <div class="card-nexus p-4 fade-up" style="animation-delay:0.07s;">
+            <div class="section-label"><i class="bi bi-slash-circle-fill" style="color:var(--rose);"></i> Blocked keywords ({{ filters | length }})</div>
+
+            {% if filters %}
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                {% for f in filters %}
+                <div class="filter-chip {% if not f.is_active %}inactive{% endif %}">
+                    <i class="bi bi-slash-circle" style="font-size:12px; color:{% if f.is_active %}var(--rose){% else %}var(--text-light){% endif %};"></i>
+                    <span class="filter-kw {% if not f.is_active %}inactive{% endif %}">{{ f.keyword }}</span>
+
+                    <!-- Toggle active/inactive -->
+                    <form method="POST" action="/settings/sync-filters/{{ f.id }}/toggle" style="margin:0;">
+                        <button type="submit" class="chip-btn pause"
+                                title="{{ 'Pause' if f.is_active else 'Resume' }} this filter">
+                            <i class="bi bi-{{ 'pause-fill' if f.is_active else 'play-fill' }}"></i>
+                        </button>
+                    </form>
+
+                    <!-- Delete -->
+                    <form method="POST" action="/settings/sync-filters/{{ f.id }}/delete" style="margin:0;"
+                          onsubmit="return confirm('Remove &quot;{{ f.keyword }}&quot; from blocklist?')">
+                        <button type="submit" class="chip-btn" title="Remove">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% else %}
+            <div style="text-align:center; padding:28px 16px; color:var(--text-muted);">
+                <i class="bi bi-funnel" style="font-size:28px; opacity:0.3; display:block; margin-bottom:10px;"></i>
+                No blocked keywords yet. Add one above.
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+    <!-- Right: Actions -->
+    <div class="col-lg-5">
+
+        <!-- How it works -->
+        <div class="card-nexus p-4 mb-4 fade-up" style="animation-delay:0.05s;">
+            <div class="section-label"><i class="bi bi-lightbulb-fill" style="color:var(--amber);"></i> How it works</div>
+            <div style="font-size:13px; color:var(--text-2); line-height:1.8; display:flex; flex-direction:column; gap:10px;">
+                <div style="display:flex; gap:10px;">
+                    <i class="bi bi-1-circle-fill" style="color:var(--primary); flex-shrink:0; margin-top:2px;"></i>
+                    <span>Any iCal event whose title <strong>contains</strong> a blocked keyword will be skipped during sync</span>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <i class="bi bi-2-circle-fill" style="color:var(--primary); flex-shrink:0; margin-top:2px;"></i>
+                    <span>Use the <strong>Danger Zone</strong> button to also delete any already-imported meetings matching these keywords</span>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <i class="bi bi-3-circle-fill" style="color:var(--primary); flex-shrink:0; margin-top:2px;"></i>
+                    <span>Pause a filter (⏸) to temporarily allow those events without deleting the rule</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Danger zone: bulk delete existing -->
+        {% if filters %}
+        <div class="danger-zone fade-up" style="animation-delay:0.1s;">
+            <div class="danger-title">
+                <i class="bi bi-exclamation-triangle-fill"></i> Danger Zone
+            </div>
+            <div class="danger-desc">
+                Delete <strong>all existing meetings</strong> in Nexus whose titles match your active blocked keywords. This cannot be undone.
+                <br><br>
+                Active filters: {% for f in filters if f.is_active %}<strong>"{{ f.keyword }}"</strong>{% if not loop.last %}, {% endif %}{% endfor %}
+            </div>
+            <form method="POST" action="/settings/sync-filters/bulk-delete"
+                  onsubmit="return confirm('This will permanently delete all meetings matching your blocked keywords. Continue?')">
+                <button type="submit" class="btn-danger-nexus" style="width:100%; justify-content:center;">
+                    <i class="bi bi-trash-fill"></i> Delete matching meetings now
+                </button>
+            </form>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}

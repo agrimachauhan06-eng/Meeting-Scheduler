@@ -148,6 +148,16 @@ class CalendarFeed(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
+class SyncFilter(db.Model):
+    """Keywords to block during iCal/email sync — titles containing these are skipped."""
+    __tablename__ = "sync_filters"
+
+    id = db.Column(db.Integer, primary_key=True)
+    keyword = db.Column(db.String(255), nullable=False, unique=True)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 class EmailSyncState(db.Model):
     __tablename__ = "email_sync_state"
 

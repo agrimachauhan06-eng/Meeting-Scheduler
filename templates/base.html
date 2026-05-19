@@ -578,6 +578,10 @@
                 <div class="nav-item-icon"><i class="bi bi-envelope-gear-fill"></i></div>
                 Email Accounts
             </a>
+            <a href="/settings/sync-filters" class="nav-item {% if request.endpoint == 'main.sync_filters' %}active{% endif %}">
+                <div class="nav-item-icon"><i class="bi bi-funnel-fill"></i></div>
+                Sync Filters
+            </a>
             <a href="/settings/calendar-feeds" class="nav-item {% if request.endpoint == 'main.calendar_feeds' %}active{% endif %}">
                 <div class="nav-item-icon"><i class="bi bi-calendar3-fill"></i></div>
                 Calendar Feeds

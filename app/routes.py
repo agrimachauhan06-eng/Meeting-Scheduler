@@ -4,7 +4,7 @@ from functools import wraps
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
 
 from app import db
-from app.models import Meeting, Reminder, EmailAccount, CalendarFeed
+from app.models import Meeting, Reminder, EmailAccount, CalendarFeed, SyncFilter
 from app.meeting_manager import MeetingManager
 from app.invite_service import InviteService
 
@@ -615,6 +615,12 @@ def _sync_feed(feed):
     except Exception as e:
         raise RuntimeError(f"Invalid iCal data: {e}")
 
+    # Load active blocked keywords once
+    blocked_keywords = [
+        f.keyword.lower()
+        for f in SyncFilter.query.filter_by(is_active=True).all()
+    ]
+
     imported = 0
     for component in cal.walk():
         if component.name != "VEVENT":
@@ -622,6 +628,11 @@ def _sync_feed(feed):
 
         uid = str(component.get("UID", "")).strip()
         summary = str(component.get("SUMMARY", "Untitled Event")).strip()
+
+        # Skip if title contains any blocked keyword
+        summary_lower = summary.lower()
+        if any(kw in summary_lower for kw in blocked_keywords):
+            continue
 
         dtstart = component.get("DTSTART")
         dtend   = component.get("DTEND") or component.get("DTSTART")
@@ -742,3 +753,63 @@ def api_sync_all_calendars():
     if errors:
         return jsonify({"synced": total, "errors": errors}), 207
     return jsonify({"synced": total})
+
+
+# --- Sync Filters (keyword blocklist) ---
+
+@main_bp.route("/settings/sync-filters")
+def sync_filters():
+    filters = SyncFilter.query.order_by(SyncFilter.created_at.desc()).all()
+    return render_template("sync_filters.html", filters=filters)
+
+
+@main_bp.route("/settings/sync-filters/add", methods=["POST"])
+def add_sync_filter():
+    keyword = request.form.get("keyword", "").strip().lower()
+    if not keyword:
+        flash("Keyword cannot be empty.", "error")
+        return redirect(url_for("main.sync_filters"))
+    if SyncFilter.query.filter_by(keyword=keyword).first():
+        flash(f'"{keyword}" is already in the blocklist.', "warning")
+        return redirect(url_for("main.sync_filters"))
+    db.session.add(SyncFilter(keyword=keyword))
+    db.session.commit()
+    flash(f'"{keyword}" added to blocklist. Future syncs will skip matching events.', "success")
+    return redirect(url_for("main.sync_filters"))
+
+
+@main_bp.route("/settings/sync-filters/<int:filter_id>/delete", methods=["POST"])
+def delete_sync_filter(filter_id):
+    f = SyncFilter.query.get(filter_id)
+    if f:
+        db.session.delete(f)
+        db.session.commit()
+        flash(f'"{f.keyword}" removed from blocklist.', "info")
+    return redirect(url_for("main.sync_filters"))
+
+
+@main_bp.route("/settings/sync-filters/<int:filter_id>/toggle", methods=["POST"])
+def toggle_sync_filter(filter_id):
+    f = SyncFilter.query.get(filter_id)
+    if f:
+        f.is_active = not f.is_active
+        db.session.commit()
+    return redirect(url_for("main.sync_filters"))
+
+
+@main_bp.route("/settings/sync-filters/bulk-delete", methods=["POST"])
+def bulk_delete_by_keywords():
+    """Delete existing meetings whose titles match active blocked keywords."""
+    keywords = [f.keyword.lower() for f in SyncFilter.query.filter_by(is_active=True).all()]
+    if not keywords:
+        flash("No active blocked keywords. Add keywords first.", "warning")
+        return redirect(url_for("main.sync_filters"))
+    total = 0
+    for kw in keywords:
+        q = Meeting.query.filter(Meeting.title.ilike(f"%{kw}%"))
+        count = q.count()
+        q.delete(synchronize_session=False)
+        total += count
+    db.session.commit()
+    flash(f"Deleted {total} existing meeting(s) matching blocked keywords.", "success")
+    return redirect(url_for("main.sync_filters"))
