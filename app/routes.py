@@ -281,24 +281,26 @@ def api_meetings():
     else:
         meetings = MeetingManager.get_upcoming_meetings(hours=168)
 
+    palette = {
+        "critical": {"backgroundColor": "rgba(244,63,94,0.13)",  "textColor": "#9F1239", "borderColor": "#F43F5E"},
+        "high":     {"backgroundColor": "rgba(245,158,11,0.13)", "textColor": "#92400E", "borderColor": "#F59E0B"},
+        "normal":   {"backgroundColor": "rgba(99,102,241,0.13)", "textColor": "#3730A3", "borderColor": "#6366F1"},
+        "low":      {"backgroundColor": "rgba(156,163,175,0.18)","textColor": "#374151", "borderColor": "#9CA3AF"},
+    }
+    cancelled_style = {"backgroundColor": "rgba(156,163,175,0.12)", "textColor": "#6B7280", "borderColor": "#D1D5DB"}
+
     events = []
     for m in meetings:
-        color = {
-            "critical": "#dc3545",
-            "high": "#fd7e14",
-            "normal": "#4A90D9",
-            "low": "#6c757d",
-        }.get(m.priority, "#4A90D9")
-
-        if m.status == "cancelled":
-            color = "#adb5bd"
+        style = cancelled_style if m.status == "cancelled" else palette.get(m.priority, palette["normal"])
 
         events.append({
             "id": m.id,
             "title": m.title,
             "start": m.start_time.isoformat(),
             "end": m.end_time.isoformat(),
-            "color": color,
+            "backgroundColor": style["backgroundColor"],
+            "textColor": style["textColor"],
+            "borderColor": style["borderColor"],
             "url": f"/meetings/{m.id}",
             "extendedProps": {
                 "location": m.location,
