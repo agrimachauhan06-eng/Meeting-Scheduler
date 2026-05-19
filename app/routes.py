@@ -282,12 +282,12 @@ def api_meetings():
         meetings = MeetingManager.get_upcoming_meetings(hours=168)
 
     palette = {
-        "critical": {"backgroundColor": "rgba(244,63,94,0.13)",  "textColor": "#9F1239", "borderColor": "#F43F5E"},
-        "high":     {"backgroundColor": "rgba(245,158,11,0.13)", "textColor": "#92400E", "borderColor": "#F59E0B"},
-        "normal":   {"backgroundColor": "rgba(99,102,241,0.13)", "textColor": "#3730A3", "borderColor": "#6366F1"},
-        "low":      {"backgroundColor": "rgba(156,163,175,0.18)","textColor": "#374151", "borderColor": "#9CA3AF"},
+        "critical": {"backgroundColor": "#FFE4E6", "textColor": "#9F1239", "borderColor": "#F43F5E"},
+        "high":     {"backgroundColor": "#FEF3C7", "textColor": "#92400E", "borderColor": "#F59E0B"},
+        "normal":   {"backgroundColor": "#E0E7FF", "textColor": "#3730A3", "borderColor": "#6366F1"},
+        "low":      {"backgroundColor": "#F3F4F6", "textColor": "#374151", "borderColor": "#9CA3AF"},
     }
-    cancelled_style = {"backgroundColor": "rgba(156,163,175,0.12)", "textColor": "#6B7280", "borderColor": "#D1D5DB"}
+    cancelled_style = {"backgroundColor": "#F1F5F9", "textColor": "#94A3B8", "borderColor": "#CBD5E1"}
 
     events = []
     for m in meetings:
