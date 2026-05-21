@@ -130,42 +130,83 @@
         }
         .brand-tag { font-size: 10px; font-weight: 500; color: var(--text-light); letter-spacing: 0.3px; }
 
-        .sidebar-nav { flex: 1; padding: 14px 12px; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; }
+        .sidebar-nav { flex: 1; padding: 10px 12px 14px; display: flex; flex-direction: column; gap: 3px; overflow-y: auto; }
 
-        .nav-group-label {
-            font-size: 10px; font-weight: 700; letter-spacing: 1.2px;
-            text-transform: uppercase; color: var(--text-light);
-            padding: 10px 8px 5px; margin-top: 4px;
-        }
+        /* ── NAV GROUP (collapsible) ── */
+        .nav-group { margin-bottom: 2px; }
 
-        .nav-item {
+        .nav-group-header {
             display: flex; align-items: center; gap: 10px;
             padding: 9px 12px; border-radius: 9px;
-            color: var(--text-muted); text-decoration: none;
-            font-size: 13.5px; font-weight: 500;
+            color: var(--text-muted); background: none; border: none; width: 100%;
+            font-size: 13px; font-weight: 600; font-family: 'Inter', sans-serif;
+            cursor: pointer; text-decoration: none;
             transition: all 0.18s ease; position: relative;
+            text-align: left;
         }
+        .nav-group-header:hover { color: var(--text-2); background: var(--surface-2); }
+        .nav-group-header.open { color: var(--primary-dark); }
 
-        .nav-item-icon {
+        .nav-group-header-icon {
             width: 28px; height: 28px; border-radius: 7px;
             display: flex; align-items: center; justify-content: center;
             font-size: 14px; transition: all 0.18s ease;
             background: var(--surface-2); color: var(--text-muted);
             flex-shrink: 0;
         }
+        .nav-group-header:hover .nav-group-header-icon,
+        .nav-group-header.open .nav-group-header-icon {
+            background: var(--primary-soft); color: var(--primary);
+        }
 
+        .nav-group-chevron {
+            margin-left: auto; font-size: 11px; color: var(--text-light);
+            transition: transform 0.22s cubic-bezier(0.4,0,0.2,1);
+        }
+        .nav-group-header.open .nav-group-chevron { transform: rotate(180deg); color: var(--primary); }
+
+        /* active-group indicator dot */
+        .nav-group-header.has-active { color: var(--primary-dark); }
+        .nav-group-header.has-active .nav-group-header-icon { background: var(--primary-soft); color: var(--primary); }
+
+        .nav-group-items {
+            overflow: hidden;
+            max-height: 0;
+            transition: max-height 0.28s cubic-bezier(0.4,0,0.2,1);
+        }
+        .nav-group-items.open { max-height: 400px; }
+
+        /* ── NAV ITEM (child) ── */
+        .nav-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 8px 12px 8px 20px; border-radius: 9px;
+            color: var(--text-muted); text-decoration: none;
+            font-size: 13px; font-weight: 500;
+            transition: all 0.18s ease; position: relative;
+            margin-top: 1px;
+        }
+        .nav-item-icon {
+            width: 24px; height: 24px; border-radius: 6px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px; transition: all 0.18s ease;
+            background: var(--surface-2); color: var(--text-muted);
+            flex-shrink: 0;
+        }
         .nav-item:hover { color: var(--text-2); background: var(--surface-2); }
         .nav-item:hover .nav-item-icon { background: var(--primary-soft); color: var(--primary); }
 
         .nav-item.active { color: var(--primary-dark); background: var(--primary-soft); font-weight: 600; }
         .nav-item.active .nav-item-icon { background: var(--primary); color: white; box-shadow: 0 3px 8px var(--primary-glow); }
-
         .nav-item.active::after {
             content: '';
             position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
-            width: 6px; height: 6px; border-radius: 50%;
+            width: 5px; height: 5px; border-radius: 50%;
             background: var(--primary);
         }
+
+        /* standalone nav item (Dashboard) — no indent */
+        .nav-item.standalone { padding-left: 12px; }
+        .nav-item.standalone .nav-item-icon { width: 28px; height: 28px; border-radius: 7px; font-size: 14px; }
 
         .sidebar-new-meeting {
             padding: 12px 12px 4px;
@@ -582,49 +623,81 @@
         </div>
 
         <div class="sidebar-nav">
-            <div class="nav-group-label">Overview</div>
-            <a href="/" class="nav-item {% if request.endpoint == 'main.dashboard' %}active{% endif %}">
+
+            <!-- Dashboard — standalone -->
+            <a href="/" class="nav-item standalone {% if request.endpoint == 'main.dashboard' %}active{% endif %}">
                 <div class="nav-item-icon"><i class="bi bi-grid-1x2-fill"></i></div>
                 Dashboard
             </a>
 
-            <div class="nav-group-label">Schedule</div>
-            <a href="/calendar" class="nav-item {% if request.endpoint == 'main.calendar_view' %}active{% endif %}">
-                <div class="nav-item-icon"><i class="bi bi-calendar3"></i></div>
-                Calendar
-            </a>
-            <a href="/meetings" class="nav-item {% if request.endpoint == 'main.meetings_list' %}active{% endif %}">
-                <div class="nav-item-icon"><i class="bi bi-list-ul"></i></div>
-                Meetings
-            </a>
-            <a href="/tasks" class="nav-item {% if request.endpoint == 'main.tasks' %}active{% endif %}">
-                <div class="nav-item-icon"><i class="bi bi-check2-square"></i></div>
-                Tasks &amp; Reminders
-            </a>
+            <!-- Schedule group -->
+            {% set schedule_active = request.endpoint in ['main.calendar_view','main.meetings_list','main.tasks','main.create_meeting'] %}
+            <div class="nav-group">
+                <button class="nav-group-header {% if schedule_active %}has-active open{% endif %}" data-group="schedule">
+                    <div class="nav-group-header-icon"><i class="bi bi-calendar3"></i></div>
+                    Schedule
+                    <i class="bi bi-chevron-down nav-group-chevron"></i>
+                </button>
+                <div class="nav-group-items {% if schedule_active %}open{% endif %}" id="group-schedule">
+                    <a href="/calendar" class="nav-item {% if request.endpoint == 'main.calendar_view' %}active{% endif %}">
+                        <div class="nav-item-icon"><i class="bi bi-calendar-week"></i></div>
+                        Calendar
+                    </a>
+                    <a href="/meetings" class="nav-item {% if request.endpoint == 'main.meetings_list' %}active{% endif %}">
+                        <div class="nav-item-icon"><i class="bi bi-list-ul"></i></div>
+                        All Meetings
+                    </a>
+                    <a href="/tasks" class="nav-item {% if request.endpoint == 'main.tasks' %}active{% endif %}">
+                        <div class="nav-item-icon"><i class="bi bi-check2-square"></i></div>
+                        Tasks &amp; Reminders
+                    </a>
+                </div>
+            </div>
 
-            <div class="nav-group-label">Team</div>
-            <a href="/availability" class="nav-item {% if request.endpoint == 'main.team_availability' %}active{% endif %}">
-                <div class="nav-item-icon"><i class="bi bi-people-fill"></i></div>
-                Availability
-            </a>
-            <a href="/team" class="nav-item {% if request.endpoint == 'main.team_members' %}active{% endif %}">
-                <div class="nav-item-icon"><i class="bi bi-person-lines-fill"></i></div>
-                Members
-            </a>
+            <!-- Team group -->
+            {% set team_active = request.endpoint in ['main.team_availability','main.team_members'] %}
+            <div class="nav-group">
+                <button class="nav-group-header {% if team_active %}has-active open{% endif %}" data-group="team">
+                    <div class="nav-group-header-icon"><i class="bi bi-people-fill"></i></div>
+                    Team
+                    <i class="bi bi-chevron-down nav-group-chevron"></i>
+                </button>
+                <div class="nav-group-items {% if team_active %}open{% endif %}" id="group-team">
+                    <a href="/availability" class="nav-item {% if request.endpoint == 'main.team_availability' %}active{% endif %}">
+                        <div class="nav-item-icon"><i class="bi bi-calendar2-check"></i></div>
+                        Availability
+                    </a>
+                    <a href="/team" class="nav-item {% if request.endpoint == 'main.team_members' %}active{% endif %}">
+                        <div class="nav-item-icon"><i class="bi bi-person-lines-fill"></i></div>
+                        My Team
+                    </a>
+                </div>
+            </div>
 
-            <div class="nav-group-label">Settings</div>
-            <a href="/settings/emails" class="nav-item {% if request.endpoint == 'main.email_accounts' %}active{% endif %}">
-                <div class="nav-item-icon"><i class="bi bi-envelope-gear-fill"></i></div>
-                Email Accounts
-            </a>
-            <a href="/settings/calendar-feeds" class="nav-item {% if request.endpoint == 'main.calendar_feeds' %}active{% endif %}">
-                <div class="nav-item-icon"><i class="bi bi-rss-fill"></i></div>
-                Calendar Feeds
-            </a>
-            <a href="/settings/sync-filters" class="nav-item {% if request.endpoint == 'main.sync_filters' %}active{% endif %}">
-                <div class="nav-item-icon"><i class="bi bi-funnel-fill"></i></div>
-                Sync Filters
-            </a>
+            <!-- Settings group -->
+            {% set settings_active = request.endpoint in ['main.email_accounts','main.calendar_feeds','main.sync_filters','main.book_meeting'] %}
+            <div class="nav-group">
+                <button class="nav-group-header {% if settings_active %}has-active open{% endif %}" data-group="settings">
+                    <div class="nav-group-header-icon"><i class="bi bi-gear-fill"></i></div>
+                    Settings
+                    <i class="bi bi-chevron-down nav-group-chevron"></i>
+                </button>
+                <div class="nav-group-items {% if settings_active %}open{% endif %}" id="group-settings">
+                    <a href="/settings/emails" class="nav-item {% if request.endpoint == 'main.email_accounts' %}active{% endif %}">
+                        <div class="nav-item-icon"><i class="bi bi-envelope-gear-fill"></i></div>
+                        Email Accounts
+                    </a>
+                    <a href="/settings/calendar-feeds" class="nav-item {% if request.endpoint == 'main.calendar_feeds' %}active{% endif %}">
+                        <div class="nav-item-icon"><i class="bi bi-rss-fill"></i></div>
+                        Calendar Feeds
+                    </a>
+                    <a href="/settings/sync-filters" class="nav-item {% if request.endpoint == 'main.sync_filters' %}active{% endif %}">
+                        <div class="nav-item-icon"><i class="bi bi-funnel-fill"></i></div>
+                        Sync Filters
+                    </a>
+                </div>
+            </div>
+
         </div>
 
         <div class="sidebar-footer">
@@ -729,6 +802,17 @@
                 setTimeout(() => el.remove(), 400);
             });
         }, 4500);
+
+        // Collapsible nav groups
+        document.querySelectorAll('.nav-group-header').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var groupId = 'group-' + btn.getAttribute('data-group');
+                var items = document.getElementById(groupId);
+                var isOpen = items.classList.contains('open');
+                items.classList.toggle('open', !isOpen);
+                btn.classList.toggle('open', !isOpen);
+            });
+        });
     </script>
     {% block extra_js %}{% endblock %}
 </body>
