@@ -107,9 +107,10 @@
 
         <div class="mb-4">
             <label class="form-label">Attendees <span style="color:var(--text-light); font-weight:400;">(comma-separated emails)</span></label>
-            <input type="text" name="attendees" class="form-control"
+            <input type="text" name="attendees" id="attendeesInput" class="form-control"
                    value="{{ meeting.attendees | map(attribute='email') | join(', ') if meeting else '' }}"
                    placeholder="alice@company.com, bob@company.com">
+            <div id="teamChips" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:10px;"></div>
         </div>
 
         <div class="mb-4">
@@ -129,4 +130,38 @@
 
     </form>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+fetch('/api/team-members')
+    .then(r => r.json())
+    .then(function(members) {
+        if (!members.length) return;
+        var container = document.getElementById('teamChips');
+        var label = document.createElement('span');
+        label.style.cssText = 'font-size:11.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.6px;align-self:center;';
+        label.textContent = 'Quick add:';
+        container.appendChild(label);
+        members.forEach(function(m) {
+            var chip = document.createElement('button');
+            chip.type = 'button';
+            chip.style.cssText = 'display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;border:1.5px solid var(--border-2);background:var(--surface);color:var(--text-2);font-size:12.5px;font-weight:600;cursor:pointer;font-family:"Inter",sans-serif;transition:all 0.15s;';
+            chip.innerHTML = '<i class="bi bi-person-fill" style="color:var(--primary);font-size:11px;"></i> ' + m.name;
+            chip.title = m.email;
+            chip.onclick = function() {
+                var input = document.getElementById('attendeesInput');
+                var emails = input.value.trim() ? input.value.split(',').map(function(e){return e.trim();}) : [];
+                if (!emails.includes(m.email)) {
+                    emails.push(m.email);
+                    input.value = emails.join(', ');
+                    chip.style.background = 'var(--primary-soft)';
+                    chip.style.color = 'var(--primary-dark)';
+                    chip.style.borderColor = 'var(--primary)';
+                }
+            };
+            container.appendChild(chip);
+        });
+    });
+</script>
 {% endblock %}

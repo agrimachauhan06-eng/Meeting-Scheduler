@@ -1021,3 +1021,47 @@ def delete_task(task_id):
     db.session.delete(task)
     db.session.commit()
     return redirect(url_for("main.tasks"))
+
+
+# ── Team Members ───────────────────────────────────────────────────────────────
+
+@main_bp.route("/team")
+def team_members():
+    from app.models import TeamMember
+    members = TeamMember.query.order_by(TeamMember.name).all()
+    return render_template("team_members.html", members=members)
+
+
+@main_bp.route("/team/add", methods=["POST"])
+def add_team_member():
+    from app.models import TeamMember
+    name  = request.form.get("name", "").strip()
+    email = request.form.get("email", "").strip().lower()
+    role  = request.form.get("role", "").strip()
+    if not name or not email:
+        flash("Name and email are required.", "error")
+        return redirect(url_for("main.team_members"))
+    if TeamMember.query.filter_by(email=email).first():
+        flash(f"{email} is already in the team.", "warning")
+        return redirect(url_for("main.team_members"))
+    db.session.add(TeamMember(name=name, email=email, role=role))
+    db.session.commit()
+    flash(f"{name} added to team.", "success")
+    return redirect(url_for("main.team_members"))
+
+
+@main_bp.route("/team/<int:member_id>/delete", methods=["POST"])
+def delete_team_member(member_id):
+    from app.models import TeamMember
+    member = TeamMember.query.get_or_404(member_id)
+    db.session.delete(member)
+    db.session.commit()
+    flash("Team member removed.", "success")
+    return redirect(url_for("main.team_members"))
+
+
+@main_bp.route("/api/team-members")
+def api_team_members():
+    from app.models import TeamMember
+    members = TeamMember.query.order_by(TeamMember.name).all()
+    return jsonify([{"name": m.name, "email": m.email, "role": m.role} for m in members])

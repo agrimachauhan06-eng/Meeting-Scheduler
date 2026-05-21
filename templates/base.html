@@ -577,6 +577,10 @@
                 <div class="nav-item-icon"><i class="bi bi-check2-square"></i></div>
                 Reminders
             </a>
+            <a href="/team" class="nav-item {% if request.endpoint == 'main.team_members' %}active{% endif %}">
+                <div class="nav-item-icon"><i class="bi bi-person-lines-fill"></i></div>
+                Team Members
+            </a>
             <div class="nav-group-label">Settings</div>
             <a href="/settings/emails" class="nav-item {% if request.endpoint == 'main.email_accounts' %}active{% endif %}">
                 <div class="nav-item-icon"><i class="bi bi-envelope-gear-fill"></i></div>
