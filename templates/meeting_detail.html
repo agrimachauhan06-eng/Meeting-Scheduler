@@ -134,6 +134,9 @@
         <i class="bi bi-arrow-left"></i> All Meetings
     </a>
     <div style="display:flex; gap:8px;">
+        <a href="/meetings/{{ meeting.id }}/edit" class="btn-primary-nexus" style="padding:8px 16px; font-size:13px;">
+            <i class="bi bi-pencil-fill"></i> Edit
+        </a>
         {% if meeting.status == 'scheduled' %}
         <form method="POST" action="/meetings/{{ meeting.id }}/cancel" style="margin:0;">
             <button type="submit" class="btn-warning-nexus" style="padding:8px 16px; font-size:13px;">

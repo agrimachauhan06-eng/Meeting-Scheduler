@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}New Meeting — Nexus{% endblock %}
+{% block title %}{% if meeting %}Edit Meeting{% else %}New Meeting{% endif %} — Nexus{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -17,10 +17,17 @@
 {% block content %}
 <div class="page-header">
     <div>
+        {% if meeting %}
+        <div class="page-title">Edit <span>Meeting</span></div>
+        <div class="page-subtitle">Update any detail — changes take effect immediately.</div>
+        {% else %}
         <div class="page-title">New <span>Meeting</span></div>
         <div class="page-subtitle">Schedule a new meeting and notify attendees automatically.</div>
+        {% endif %}
     </div>
-    <a href="/" class="btn-outline-nexus"><i class="bi bi-arrow-left"></i> Back</a>
+    <a href="{{ '/meetings/' ~ meeting.id if meeting else '/' }}" class="btn-outline-nexus">
+        <i class="bi bi-arrow-left"></i> Back
+    </a>
 </div>
 
 <div class="card-nexus p-4" style="max-width:700px;">
@@ -31,6 +38,7 @@
         <div class="mb-4">
             <label class="form-label">Meeting Title *</label>
             <input type="text" name="title" class="form-control" required
+                   value="{{ meeting.title if meeting else '' }}"
                    placeholder="e.g., Q2 Product Roadmap Review"
                    style="font-size:15px; font-weight:600; padding:12px 16px;">
         </div>
@@ -38,18 +46,20 @@
         <div class="row mb-4">
             <div class="col-md-6 mb-3 mb-md-0">
                 <label class="form-label">Start Time *</label>
-                <input type="datetime-local" name="start_time" class="form-control" required>
+                <input type="datetime-local" name="start_time" class="form-control" required
+                       value="{{ meeting.start_time.strftime('%Y-%m-%dT%H:%M') if meeting else '' }}">
             </div>
             <div class="col-md-6">
                 <label class="form-label">End Time *</label>
-                <input type="datetime-local" name="end_time" class="form-control" required>
+                <input type="datetime-local" name="end_time" class="form-control" required
+                       value="{{ meeting.end_time.strftime('%Y-%m-%dT%H:%M') if meeting else '' }}">
             </div>
         </div>
 
         <div class="mb-4">
             <label class="form-label">Description / Agenda</label>
             <textarea name="description" class="form-control" rows="3"
-                      placeholder="What will you cover? Add context or agenda items…"></textarea>
+                      placeholder="What will you cover? Add context or agenda items…">{{ meeting.description if meeting else '' }}</textarea>
         </div>
 
         <hr class="divider">
@@ -58,11 +68,15 @@
         <div class="row mb-4">
             <div class="col-md-6 mb-3 mb-md-0">
                 <label class="form-label">Location</label>
-                <input type="text" name="location" class="form-control" placeholder="e.g., Conference Room B, Mumbai">
+                <input type="text" name="location" class="form-control"
+                       value="{{ meeting.location if meeting else '' }}"
+                       placeholder="e.g., Conference Room B, Mumbai">
             </div>
             <div class="col-md-6">
                 <label class="form-label">Video Link</label>
-                <input type="url" name="meeting_link" class="form-control" placeholder="https://meet.google.com/…">
+                <input type="url" name="meeting_link" class="form-control"
+                       value="{{ meeting.meeting_link if meeting else '' }}"
+                       placeholder="https://meet.google.com/…">
             </div>
         </div>
 
@@ -73,15 +87,18 @@
             <div class="col-md-6 mb-3 mb-md-0">
                 <label class="form-label">Priority</label>
                 <select name="priority" class="form-select">
-                    <option value="low">🔵 Low</option>
-                    <option value="normal" selected>🟣 Normal</option>
-                    <option value="high">🟠 High</option>
-                    <option value="critical">🔴 Critical</option>
+                    {% set p = meeting.priority if meeting else 'normal' %}
+                    <option value="low"      {% if p=='low'      %}selected{% endif %}>🔵 Low</option>
+                    <option value="normal"   {% if p=='normal'   %}selected{% endif %}>🟣 Normal</option>
+                    <option value="high"     {% if p=='high'     %}selected{% endif %}>🟠 High</option>
+                    <option value="critical" {% if p=='critical' %}selected{% endif %}>🔴 Critical</option>
                 </select>
             </div>
             <div class="col-md-6">
                 <label class="form-label">Reminders <span style="color:var(--text-light); font-weight:400;">(minutes before)</span></label>
-                <input type="text" name="reminder_minutes" class="form-control" value="15,5" placeholder="30,15,5">
+                <input type="text" name="reminder_minutes" class="form-control"
+                       value="{{ meeting.reminders | map(attribute='remind_at') | list | length if meeting else '15,5' }}"
+                       placeholder="30,15,5">
             </div>
         </div>
 
@@ -91,20 +108,23 @@
         <div class="mb-4">
             <label class="form-label">Attendees <span style="color:var(--text-light); font-weight:400;">(comma-separated emails)</span></label>
             <input type="text" name="attendees" class="form-control"
+                   value="{{ meeting.attendees | map(attribute='email') | join(', ') if meeting else '' }}"
                    placeholder="alice@company.com, bob@company.com">
         </div>
 
         <div class="mb-4">
             <label class="form-label">Tags <span style="color:var(--text-light); font-weight:400;">(comma-separated)</span></label>
-            <input type="text" name="tags" class="form-control" placeholder="design, product, q2">
+            <input type="text" name="tags" class="form-control"
+                   value="{{ meeting.tags | map(attribute='tag_name') | join(', ') if meeting else '' }}"
+                   placeholder="design, product, q2">
         </div>
 
         <hr class="divider">
         <div style="display:flex; gap:10px;">
             <button type="submit" class="btn-primary-nexus" style="padding:12px 28px; font-size:14px;">
-                <i class="bi bi-check-lg"></i> Create Meeting
+                <i class="bi bi-check-lg"></i> {% if meeting %}Save Changes{% else %}Create Meeting{% endif %}
             </button>
-            <a href="/" class="btn-outline-nexus">Cancel</a>
+            <a href="{{ '/meetings/' ~ meeting.id if meeting else '/' }}" class="btn-outline-nexus">Cancel</a>
         </div>
 
     </form>

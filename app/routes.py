@@ -257,6 +257,68 @@ def create_meeting():
     return render_template("meeting_form.html")
 
 
+@main_bp.route("/meetings/<int:meeting_id>/edit", methods=["GET", "POST"])
+def edit_meeting(meeting_id):
+    meeting = MeetingManager.get_meeting(meeting_id)
+    if not meeting:
+        flash("Meeting not found.", "error")
+        return redirect(url_for("main.meetings_list"))
+
+    if request.method == "POST":
+        title        = request.form.get("title", "").strip()
+        start_str    = request.form.get("start_time", "")
+        end_str      = request.form.get("end_time", "")
+        description  = request.form.get("description", "")
+        location     = request.form.get("location", "")
+        meeting_link = request.form.get("meeting_link", "")
+        priority     = request.form.get("priority", "normal")
+        attendees_str= request.form.get("attendees", "")
+        tags_str     = request.form.get("tags", "")
+
+        if not title or not start_str or not end_str:
+            flash("Title, start time, and end time are required.", "error")
+            return render_template("meeting_form.html", meeting=meeting)
+
+        try:
+            start_time = datetime.fromisoformat(start_str)
+            end_time   = datetime.fromisoformat(end_str)
+        except ValueError:
+            flash("Invalid date format.", "error")
+            return render_template("meeting_form.html", meeting=meeting)
+
+        if end_time <= start_time:
+            flash("End time must be after start time.", "error")
+            return render_template("meeting_form.html", meeting=meeting)
+
+        # Update core fields
+        meeting.title        = title
+        meeting.start_time   = start_time
+        meeting.end_time     = end_time
+        meeting.description  = description
+        meeting.location     = location
+        meeting.meeting_link = meeting_link
+        meeting.priority     = priority
+
+        # Replace attendees
+        from app.models import Attendee, MeetingTag
+        Attendee.query.filter_by(meeting_id=meeting.id).delete()
+        for a in attendees_str.split(","):
+            a = a.strip()
+            if a:
+                db.session.add(Attendee(meeting_id=meeting.id, email=a))
+
+        # Replace tags
+        MeetingTag.query.filter_by(meeting_id=meeting.id).delete()
+        for t in [t.strip() for t in tags_str.split(",") if t.strip()]:
+            db.session.add(MeetingTag(meeting_id=meeting.id, tag_name=t))
+
+        db.session.commit()
+        flash(f"Meeting updated successfully.", "success")
+        return redirect(url_for("main.meeting_detail", meeting_id=meeting.id))
+
+    return render_template("meeting_form.html", meeting=meeting)
+
+
 @main_bp.route("/meetings/<int:meeting_id>")
 def meeting_detail(meeting_id):
     meeting = MeetingManager.get_meeting(meeting_id)
