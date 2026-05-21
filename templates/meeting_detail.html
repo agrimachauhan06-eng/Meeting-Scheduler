@@ -102,6 +102,28 @@
         margin-bottom: 16px; padding-bottom: 10px;
         border-bottom: 2px solid var(--primary-soft);
     }
+
+    /* Note taker */
+    .live-dot {
+        display: inline-block; width: 8px; height: 8px;
+        background: var(--rose); border-radius: 50%;
+        animation: pulse-dot 1.2s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50%       { opacity: 0.4; transform: scale(0.7); }
+    }
+    #transcript {
+        font-size: 13.5px; line-height: 1.75;
+        border: 1.5px solid var(--border);
+        border-radius: var(--r-lg);
+        padding: 14px 16px;
+        resize: vertical; min-height: 180px;
+        font-family: 'Inter', sans-serif;
+        transition: border-color 0.2s;
+    }
+    #transcript:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px var(--primary-glow); }
+    #transcript.listening { border-color: var(--rose); box-shadow: 0 0 0 3px rgba(244,63,94,0.12); }
 </style>
 {% endblock %}
 
@@ -315,4 +337,120 @@
     </div>
 </div>
 
+<!-- Note Taker — full width below the two columns -->
+<div class="card-nexus p-4 mt-4 fade-up">
+    <div class="section-head" style="justify-content:space-between; flex-wrap:wrap; gap:8px;">
+        <span style="display:flex; align-items:center; gap:8px;">
+            <i class="bi bi-mic-fill"></i> Meeting Notes
+            <span id="liveIndicator" style="display:none; align-items:center; gap:5px;
+                font-size:11px; background:var(--rose-soft); color:var(--rose);
+                border:1px solid rgba(244,63,94,0.25); border-radius:20px; padding:2px 10px;">
+                <span class="live-dot"></span> LIVE
+            </span>
+        </span>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button id="startBtn" onclick="startTranscription()"
+                class="btn-primary-nexus" style="font-size:12.5px; padding:7px 14px;">
+                <i class="bi bi-mic-fill"></i> Start Live Transcription
+            </button>
+            <button id="stopBtn" onclick="stopTranscription()"
+                style="display:none; font-size:12.5px; padding:7px 14px;"
+                class="btn-warning-nexus">
+                <i class="bi bi-stop-circle-fill"></i> Stop
+            </button>
+        </div>
+    </div>
+
+    <div style="font-size:12px; color:var(--text-muted); margin-bottom:12px; display:flex; align-items:center; gap:6px;">
+        <i class="bi bi-info-circle"></i>
+        Click <strong>Start Live Transcription</strong> to capture your mic in real-time (Chrome/Edge only) — or type/paste notes manually.
+    </div>
+
+    <form method="POST" action="/meetings/{{ meeting.id }}/notes">
+        <textarea id="transcript" name="transcript"
+                  placeholder="Your meeting notes or transcript will appear here...">{{ meeting.transcript or '' }}</textarea>
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-top:12px; flex-wrap:wrap; gap:8px;">
+            <button type="button" onclick="clearNotes()"
+                style="font-size:12.5px; padding:7px 13px; background:none; border:1.5px solid var(--border);
+                border-radius:9px; color:var(--text-muted); cursor:pointer; font-family:'Inter',sans-serif; font-weight:600;">
+                <i class="bi bi-trash"></i> Clear
+            </button>
+            <button type="submit" class="btn-primary-nexus" style="font-size:13px; padding:9px 20px;">
+                <i class="bi bi-floppy-fill"></i> Save Notes
+            </button>
+        </div>
+    </form>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+var recognition  = null;
+var finalText    = '';
+
+function startTranscription() {
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
+        alert('Live transcription requires Chrome or Edge. You can still type or paste notes manually.');
+        return;
+    }
+    // Seed finalText from whatever is already in the box
+    finalText = document.getElementById('transcript').value;
+
+    recognition = new SR();
+    recognition.continuous     = true;
+    recognition.interimResults = true;
+    recognition.lang           = 'en-US';
+
+    recognition.onresult = function(e) {
+        var interim = '';
+        for (var i = e.resultIndex; i < e.results.length; i++) {
+            if (e.results[i].isFinal) {
+                finalText += e.results[i][0].transcript + ' ';
+            } else {
+                interim += e.results[i][0].transcript;
+            }
+        }
+        document.getElementById('transcript').value = finalText + interim;
+    };
+
+    recognition.onerror = function(e) {
+        console.error('Speech error:', e.error);
+        stopTranscription();
+    };
+
+    recognition.onend = function() {
+        // Auto-restart if stop wasn't user-initiated
+        if (recognition) recognition.start();
+    };
+
+    recognition.start();
+    document.getElementById('startBtn').style.display    = 'none';
+    document.getElementById('stopBtn').style.display     = 'flex';
+    document.getElementById('liveIndicator').style.display = 'flex';
+    document.getElementById('transcript').classList.add('listening');
+}
+
+function stopTranscription() {
+    if (recognition) {
+        recognition.onend = null;   // prevent auto-restart
+        recognition.stop();
+        recognition = null;
+    }
+    document.getElementById('startBtn').style.display    = 'flex';
+    document.getElementById('stopBtn').style.display     = 'none';
+    document.getElementById('liveIndicator').style.display = 'none';
+    document.getElementById('transcript').classList.remove('listening');
+    // Sync finalText with the box (clears interim)
+    finalText = document.getElementById('transcript').value;
+}
+
+function clearNotes() {
+    if (confirm('Clear all notes?')) {
+        finalText = '';
+        document.getElementById('transcript').value = '';
+    }
+}
+</script>
 {% endblock %}

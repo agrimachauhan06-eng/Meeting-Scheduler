@@ -266,6 +266,15 @@ def meeting_detail(meeting_id):
     return render_template("meeting_detail.html", meeting=meeting)
 
 
+@main_bp.route("/meetings/<int:meeting_id>/notes", methods=["POST"])
+def save_meeting_notes(meeting_id):
+    meeting = Meeting.query.get_or_404(meeting_id)
+    meeting.transcript = request.form.get("transcript", "").strip()
+    db.session.commit()
+    flash("Notes saved.", "success")
+    return redirect(url_for("main.meeting_detail", meeting_id=meeting_id))
+
+
 @main_bp.route("/meetings/<int:meeting_id>/cancel", methods=["POST"])
 def cancel_meeting(meeting_id):
     MeetingManager.cancel_meeting(meeting_id)
