@@ -28,7 +28,8 @@ def dashboard():
     upcoming = MeetingManager.get_upcoming_meetings(hours=48)
     todays = MeetingManager.get_todays_meetings()
     return render_template(
-        "dashboard.html", stats=stats, upcoming=upcoming, todays=todays
+        "dashboard.html", stats=stats, upcoming=upcoming, todays=todays,
+        now=datetime.utcnow()
     )
 
 
