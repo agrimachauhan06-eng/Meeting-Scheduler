@@ -167,6 +167,30 @@
             background: var(--primary);
         }
 
+        .sidebar-new-meeting {
+            padding: 12px 12px 4px;
+        }
+
+        .sidebar-cta {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            width: 100%; padding: 10px 16px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--violet) 100%);
+            color: white; border: none; border-radius: 10px;
+            font-size: 13px; font-weight: 600; font-family: 'Inter', sans-serif;
+            cursor: pointer; text-decoration: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 14px var(--primary-glow);
+        }
+        .sidebar-cta:hover {
+            color: white; transform: translateY(-1px);
+            box-shadow: 0 6px 18px var(--primary-glow);
+            filter: brightness(1.06);
+        }
+        .sidebar-cta-active {
+            filter: brightness(0.92);
+            box-shadow: 0 2px 8px var(--primary-glow);
+        }
+
         .sidebar-footer { padding: 14px 12px; border-top: 1px solid var(--border); }
 
         .sync-btn {
@@ -551,66 +575,75 @@
             </div>
         </a>
 
+        <div class="sidebar-new-meeting">
+            <a href="/meetings/new" class="sidebar-cta {% if request.endpoint == 'main.create_meeting' %}sidebar-cta-active{% endif %}">
+                <i class="bi bi-plus-lg"></i> New Meeting
+            </a>
+        </div>
+
         <div class="sidebar-nav">
-            <div class="nav-group-label">Main</div>
+            <div class="nav-group-label">Overview</div>
             <a href="/" class="nav-item {% if request.endpoint == 'main.dashboard' %}active{% endif %}">
                 <div class="nav-item-icon"><i class="bi bi-grid-1x2-fill"></i></div>
                 Dashboard
             </a>
+
+            <div class="nav-group-label">Schedule</div>
             <a href="/calendar" class="nav-item {% if request.endpoint == 'main.calendar_view' %}active{% endif %}">
                 <div class="nav-item-icon"><i class="bi bi-calendar3"></i></div>
                 Calendar
             </a>
             <a href="/meetings" class="nav-item {% if request.endpoint == 'main.meetings_list' %}active{% endif %}">
                 <div class="nav-item-icon"><i class="bi bi-list-ul"></i></div>
-                All Meetings
-            </a>
-            <a href="/meetings/new" class="nav-item {% if request.endpoint == 'main.create_meeting' %}active{% endif %}">
-                <div class="nav-item-icon"><i class="bi bi-plus-lg"></i></div>
-                New Meeting
-            </a>
-            <a href="/availability" class="nav-item {% if request.endpoint == 'main.team_availability' %}active{% endif %}">
-                <div class="nav-item-icon"><i class="bi bi-people-fill"></i></div>
-                Team Availability
+                Meetings
             </a>
             <a href="/tasks" class="nav-item {% if request.endpoint == 'main.tasks' %}active{% endif %}">
                 <div class="nav-item-icon"><i class="bi bi-check2-square"></i></div>
-                Reminders
+                Tasks &amp; Reminders
+            </a>
+
+            <div class="nav-group-label">Team</div>
+            <a href="/availability" class="nav-item {% if request.endpoint == 'main.team_availability' %}active{% endif %}">
+                <div class="nav-item-icon"><i class="bi bi-people-fill"></i></div>
+                Availability
             </a>
             <a href="/team" class="nav-item {% if request.endpoint == 'main.team_members' %}active{% endif %}">
                 <div class="nav-item-icon"><i class="bi bi-person-lines-fill"></i></div>
-                Team Members
+                Members
             </a>
+
             <div class="nav-group-label">Settings</div>
             <a href="/settings/emails" class="nav-item {% if request.endpoint == 'main.email_accounts' %}active{% endif %}">
                 <div class="nav-item-icon"><i class="bi bi-envelope-gear-fill"></i></div>
                 Email Accounts
             </a>
+            <a href="/settings/calendar-feeds" class="nav-item {% if request.endpoint == 'main.calendar_feeds' %}active{% endif %}">
+                <div class="nav-item-icon"><i class="bi bi-rss-fill"></i></div>
+                Calendar Feeds
+            </a>
             <a href="/settings/sync-filters" class="nav-item {% if request.endpoint == 'main.sync_filters' %}active{% endif %}">
                 <div class="nav-item-icon"><i class="bi bi-funnel-fill"></i></div>
                 Sync Filters
             </a>
-            <a href="/settings/calendar-feeds" class="nav-item {% if request.endpoint == 'main.calendar_feeds' %}active{% endif %}">
-                <div class="nav-item-icon"><i class="bi bi-calendar3-fill"></i></div>
-                Calendar Feeds
-            </a>
-            <a href="/book" target="_blank" class="nav-item {% if request.endpoint == 'main.book_meeting' %}active{% endif %}">
-                <div class="nav-item-icon"><i class="bi bi-calendar2-plus-fill"></i></div>
+        </div>
+
+        <div class="sidebar-footer">
+            <a href="/book" target="_blank" class="sync-btn" style="margin-bottom:8px; text-decoration:none;">
+                <i class="bi bi-calendar2-plus-fill" style="color:var(--violet);"></i>
                 Booking Page
-                <span style="margin-left:auto; font-size:9.5px; font-weight:700; letter-spacing:0.3px;
+                <span style="margin-left:auto; font-size:9px; font-weight:700; letter-spacing:0.4px;
                     background:linear-gradient(135deg,var(--primary),var(--violet));
                     -webkit-background-clip:text; -webkit-text-fill-color:transparent;
                     background-clip:text;">SHARE</span>
             </a>
-        </div>
-
-        <div class="sidebar-footer">
-            <button class="sync-btn" onclick="copyBookingLink()" id="copyLinkBtn" style="margin-bottom:8px;">
-                <i class="bi bi-link-45deg"></i> Copy Booking Link
-            </button>
-            <button class="sync-btn" onclick="syncEmails()" id="syncEmailsBtn">
-                <i class="bi bi-arrow-clockwise"></i> Sync Emails
-            </button>
+            <div style="display:flex; gap:6px;">
+                <button class="sync-btn" onclick="copyBookingLink()" id="copyLinkBtn" style="flex:1;">
+                    <i class="bi bi-link-45deg"></i> Copy Link
+                </button>
+                <button class="sync-btn" onclick="syncEmails()" id="syncEmailsBtn" style="flex:1;">
+                    <i class="bi bi-arrow-clockwise"></i> Sync
+                </button>
+            </div>
         </div>
     </nav>
 
