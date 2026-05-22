@@ -393,11 +393,21 @@ var recognition  = null;
 var finalText    = '';
 
 function startTranscription() {
+    // Web Speech API requires a secure context (HTTPS)
+    if (location.protocol !== 'https:') {
+        var httpsUrl = location.href.replace('http://', 'https://');
+        if (confirm('Live transcription requires a secure connection (HTTPS).\n\nClick OK to switch to the secure version of this page.')) {
+            location.href = httpsUrl;
+        }
+        return;
+    }
+
     var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) {
         alert('Live transcription requires Chrome or Edge. You can still type or paste notes manually.');
         return;
     }
+
     // Seed finalText from whatever is already in the box
     finalText = document.getElementById('transcript').value;
 
@@ -421,6 +431,17 @@ function startTranscription() {
     recognition.onerror = function(e) {
         console.error('Speech error:', e.error);
         stopTranscription();
+        var msg = {
+            'not-allowed':         'Microphone access was denied. Please allow microphone permission in your browser and try again.',
+            'service-not-allowed': 'Microphone access was denied. Make sure you\'re on HTTPS and have granted microphone permission.',
+            'no-speech':           'No speech detected. Please speak closer to your microphone.',
+            'audio-capture':       'No microphone found. Please connect a microphone and try again.',
+            'network':             'A network error occurred. Please check your connection and try again.',
+            'aborted':             'Transcription was stopped.'
+        }[e.error] || ('Transcription error: ' + e.error);
+        if (e.error !== 'aborted' && e.error !== 'no-speech') {
+            alert(msg);
+        }
     };
 
     recognition.onend = function() {
