@@ -430,18 +430,17 @@ function startTranscription() {
 
     recognition.onerror = function(e) {
         console.error('Speech error:', e.error);
+        // no-speech is non-fatal (silence timeout) — let onend restart automatically
+        if (e.error === 'no-speech') return;
+        // For all other errors, stop and inform the user
         stopTranscription();
         var msg = {
             'not-allowed':         'Microphone access was denied. Please allow microphone permission in your browser and try again.',
             'service-not-allowed': 'Microphone access was denied. Make sure you\'re on HTTPS and have granted microphone permission.',
-            'no-speech':           'No speech detected. Please speak closer to your microphone.',
             'audio-capture':       'No microphone found. Please connect a microphone and try again.',
             'network':             'A network error occurred. Please check your connection and try again.',
-            'aborted':             'Transcription was stopped.'
         }[e.error] || ('Transcription error: ' + e.error);
-        if (e.error !== 'aborted' && e.error !== 'no-speech') {
-            alert(msg);
-        }
+        alert(msg);
     };
 
     recognition.onend = function() {
