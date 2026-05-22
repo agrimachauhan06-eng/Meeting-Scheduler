@@ -396,32 +396,16 @@
 <script>
 var recognition  = null;
 var finalText    = '';
+var isListening  = false;
 
-function startTranscription() {
-    // Web Speech API requires a secure context (HTTPS)
-    if (location.protocol !== 'https:') {
-        var httpsUrl = location.href.replace('http://', 'https://');
-        if (confirm('Live transcription requires a secure connection (HTTPS).\n\nClick OK to switch to the secure version of this page.')) {
-            location.href = httpsUrl;
-        }
-        return;
-    }
-
+function _buildRecognition() {
     var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) {
-        alert('Live transcription requires Chrome or Edge. You can still type or paste notes manually.');
-        return;
-    }
+    var r = new SR();
+    r.continuous     = true;
+    r.interimResults = true;
+    r.lang           = 'en-US';
 
-    // Seed finalText from whatever is already in the box
-    finalText = document.getElementById('transcript').value;
-
-    recognition = new SR();
-    recognition.continuous     = true;
-    recognition.interimResults = true;
-    recognition.lang           = 'en-US';
-
-    recognition.onresult = function(e) {
+    r.onresult = function(e) {
         var interim = '';
         for (var i = e.resultIndex; i < e.results.length; i++) {
             if (e.results[i].isFinal) {
@@ -433,45 +417,69 @@ function startTranscription() {
         document.getElementById('transcript').value = finalText + interim;
     };
 
-    recognition.onerror = function(e) {
+    r.onerror = function(e) {
         console.error('Speech error:', e.error);
-        // no-speech is non-fatal (silence timeout) — let onend restart automatically
-        if (e.error === 'no-speech') return;
-        // For all other errors, stop and inform the user
-        stopTranscription();
+        if (e.error === 'no-speech') return; // non-fatal — onend will restart
+        isListening = false;
+        recognition = null;
+        _updateUI(false);
         var msg = {
-            'not-allowed':         'Microphone access was denied. Please allow microphone permission in your browser and try again.',
-            'service-not-allowed': 'Microphone access was denied. Make sure you\'re on HTTPS and have granted microphone permission.',
+            'not-allowed':         'Microphone access was denied. Please allow microphone permission and try again.',
+            'service-not-allowed': 'Microphone access was denied. Make sure you\'re on HTTPS.',
             'audio-capture':       'No microphone found. Please connect a microphone and try again.',
             'network':             'A network error occurred. Please check your connection and try again.',
         }[e.error] || ('Transcription error: ' + e.error);
         alert(msg);
     };
 
-    recognition.onend = function() {
-        // Auto-restart if stop wasn't user-initiated
-        if (recognition) recognition.start();
+    r.onend = function() {
+        if (isListening) {
+            // Create a fresh instance each restart to avoid Chrome rate-limit issues
+            setTimeout(function() {
+                if (isListening) {
+                    recognition = _buildRecognition();
+                    recognition.start();
+                }
+            }, 150);
+        }
     };
+    return r;
+}
 
+function _updateUI(on) {
+    document.getElementById('startBtn').style.display      = on ? 'none'  : 'flex';
+    document.getElementById('stopBtn').style.display       = on ? 'flex'  : 'none';
+    document.getElementById('liveIndicator').style.display = on ? 'flex'  : 'none';
+    document.getElementById('transcript').classList.toggle('listening', on);
+}
+
+function startTranscription() {
+    if (location.protocol !== 'https:') {
+        if (confirm('Live transcription requires HTTPS.\n\nClick OK to switch to the secure version.')) {
+            location.href = location.href.replace('http://', 'https://');
+        }
+        return;
+    }
+    if (!(window.SpeechRecognition || window.webkitSpeechRecognition)) {
+        alert('Live transcription requires Chrome or Edge. You can still type notes manually.');
+        return;
+    }
+    finalText   = document.getElementById('transcript').value;
+    isListening = true;
+    recognition = _buildRecognition();
     recognition.start();
-    document.getElementById('startBtn').style.display    = 'none';
-    document.getElementById('stopBtn').style.display     = 'flex';
-    document.getElementById('liveIndicator').style.display = 'flex';
-    document.getElementById('transcript').classList.add('listening');
+    _updateUI(true);
 }
 
 function stopTranscription() {
+    isListening = false;
     if (recognition) {
-        recognition.onend = null;   // prevent auto-restart
+        recognition.onend = null;
         recognition.stop();
         recognition = null;
     }
-    document.getElementById('startBtn').style.display    = 'flex';
-    document.getElementById('stopBtn').style.display     = 'none';
-    document.getElementById('liveIndicator').style.display = 'none';
-    document.getElementById('transcript').classList.remove('listening');
-    // Sync finalText with the box (clears interim)
     finalText = document.getElementById('transcript').value;
+    _updateUI(false);
 }
 
 function clearNotes() {
