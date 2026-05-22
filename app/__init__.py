@@ -24,11 +24,27 @@ def create_app():
     app.register_blueprint(main_bp)
 
     # Register markdown filter for templates
-    import markdown as md
     from markupsafe import Markup
-    @app.template_filter('markdown')
-    def markdown_filter(text):
-        return Markup(md.markdown(text or '', extensions=['extra', 'nl2br']))
+    try:
+        import markdown as md
+        @app.template_filter('markdown')
+        def markdown_filter(text):
+            return Markup(md.markdown(text or '', extensions=['extra', 'nl2br']))
+    except ImportError:
+        import re
+        @app.template_filter('markdown')
+        def markdown_filter(text):
+            # Simple fallback: convert **bold**, ## headers, - bullets, [ ] checkboxes
+            if not text:
+                return Markup('')
+            text = Markup.escape(text)
+            text = re.sub(r'^## (.+)$', r'<h2>\1</h2>', str(text), flags=re.MULTILINE)
+            text = re.sub(r'^### (.+)$', r'<h3>\1</h3>', str(text), flags=re.MULTILINE)
+            text = re.sub(r'^\- \[ \] (.+)$', r'<li><input type="checkbox"> \1</li>', str(text), flags=re.MULTILINE)
+            text = re.sub(r'^\- (.+)$', r'<li>\1</li>', str(text), flags=re.MULTILINE)
+            text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', text)
+            text = re.sub(r'\n\n', '<br><br>', text)
+            return Markup(text)
 
     with app.app_context():
         db.create_all()
