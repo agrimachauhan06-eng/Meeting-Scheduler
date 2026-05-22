@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Notes — {{ meeting.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .notes-hero {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--violet) 100%);
+        border-radius: var(--r-xl);
+        padding: 28px 36px;
+        margin-bottom: 28px;
+        box-shadow: 0 12px 40px var(--primary-glow);
+    }
+    .notes-hero-title {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 22px; font-weight: 800;
+        color: white; letter-spacing: -0.5px;
+        margin-bottom: 10px;
+    }
+    .notes-hero-meta {
+        display: flex; gap: 10px; flex-wrap: wrap;
+    }
+    .notes-hero-badge {
+        display: inline-flex; align-items: center; gap: 5px;
+        padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+        background: rgba(255,255,255,0.15); color: white;
+        border: 1px solid rgba(255,255,255,0.2);
+    }
+    .notes-body {
+        font-family: 'Inter', 'Segoe UI', sans-serif;
+        font-size: 16px;
+        line-height: 1.9;
+        color: var(--text);
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+    .notes-empty {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--text-muted);
+    }
+    .notes-empty i { font-size: 48px; opacity: 0.3; display: block; margin-bottom: 16px; }
+    .notes-empty p { font-size: 15px; margin: 0; }
+    @media print {
+        .sidebar, .no-print { display: none !important; }
+        .main-content { margin-left: 0 !important; }
+        .notes-body { font-size: 13pt; line-height: 1.8; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div style="margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;" class="no-print">
+    <a href="/meetings/{{ meeting.id }}" class="btn-outline-nexus" style="font-size:13px; padding:8px 16px;">
+        <i class="bi bi-arrow-left"></i> Back to Meeting
+    </a>
+    <div style="display:flex; gap:8px;">
+        <button onclick="window.print()" class="btn-outline-nexus" style="font-size:13px; padding:8px 16px;">
+            <i class="bi bi-printer"></i> Print
+        </button>
+        <a href="/meetings/{{ meeting.id }}#notes-section" class="btn-primary-nexus" style="font-size:13px; padding:8px 16px;">
+            <i class="bi bi-pencil-fill"></i> Edit Notes
+        </a>
+    </div>
+</div>
+
+<!-- Hero -->
+<div class="notes-hero fade-up">
+    <div class="notes-hero-title"><i class="bi bi-journal-text" style="margin-right:8px;"></i>{{ meeting.title }} — Notes</div>
+    <div class="notes-hero-meta">
+        <span class="notes-hero-badge"><i class="bi bi-calendar3"></i> {{ meeting.start_time.strftime('%A, %B %d, %Y') }}</span>
+        <span class="notes-hero-badge"><i class="bi bi-clock"></i> {{ meeting.start_time.strftime('%I:%M %p') }} – {{ meeting.end_time.strftime('%I:%M %p') }}</span>
+        {% if meeting.organizer %}
+        <span class="notes-hero-badge"><i class="bi bi-person"></i> {{ meeting.organizer }}</span>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Notes body -->
+<div class="card-nexus p-5 fade-up" style="max-width:860px; margin:0 auto;">
+    {% if meeting.transcript %}
+        <div class="notes-body">{{ meeting.transcript }}</div>
+    {% else %}
+        <div class="notes-empty">
+            <i class="bi bi-journal"></i>
+            <p>No notes saved for this meeting yet.</p>
+            <a href="/meetings/{{ meeting.id }}" class="btn-primary-nexus no-print" style="margin-top:16px; display:inline-flex; font-size:13px; padding:9px 20px;">
+                <i class="bi bi-mic-fill"></i> Go record notes
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+{% endblock %}
