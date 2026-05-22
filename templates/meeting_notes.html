@@ -33,6 +33,23 @@
         white-space: pre-wrap;
         word-break: break-word;
     }
+    /* Rendered markdown styles */
+    .notes-markdown h1, .notes-markdown h2, .notes-markdown h3 {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-weight: 700; color: var(--text); margin: 24px 0 10px;
+    }
+    .notes-markdown h2 { font-size: 18px; border-bottom: 2px solid var(--primary-soft); padding-bottom: 6px; }
+    .notes-markdown h3 { font-size: 15px; color: var(--primary); }
+    .notes-markdown ul, .notes-markdown ol { padding-left: 22px; margin: 8px 0 16px; }
+    .notes-markdown li { font-size: 15px; line-height: 1.8; color: var(--text); margin-bottom: 4px; }
+    .notes-markdown li input[type=checkbox] { margin-right: 7px; accent-color: var(--primary); }
+    .notes-markdown p { font-size: 15px; line-height: 1.8; margin: 8px 0; }
+    .notes-markdown strong { color: var(--text); }
+    .notes-markdown hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+    .tab-btn { background: none; border: none; cursor: pointer; font-family: 'Inter', sans-serif;
+        font-size: 13px; font-weight: 600; padding: 8px 16px; border-radius: 8px;
+        color: var(--text-muted); transition: all 0.15s; }
+    .tab-btn.active { background: var(--primary-soft); color: var(--primary); }
     .notes-empty {
         text-align: center;
         padding: 60px 20px;
@@ -43,7 +60,7 @@
     @media print {
         .sidebar, .no-print { display: none !important; }
         .main-content { margin-left: 0 !important; }
-        .notes-body { font-size: 13pt; line-height: 1.8; }
+        .notes-markdown li { font-size: 13pt; line-height: 1.8; }
     }
 </style>
 {% endblock %}
@@ -54,11 +71,18 @@
     <a href="/meetings/{{ meeting.id }}" class="btn-outline-nexus" style="font-size:13px; padding:8px 16px;">
         <i class="bi bi-arrow-left"></i> Back to Meeting
     </a>
-    <div style="display:flex; gap:8px;">
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        {% if meeting.transcript %}
+        <form method="POST" action="/meetings/{{ meeting.id }}/notes/format" style="margin:0;">
+            <button type="submit" class="btn-primary-nexus" style="font-size:13px; padding:8px 16px;">
+                <i class="bi bi-stars"></i> {{ 'Re-format with AI' if meeting.formatted_transcript else 'Format with AI' }}
+            </button>
+        </form>
+        {% endif %}
         <button onclick="window.print()" class="btn-outline-nexus" style="font-size:13px; padding:8px 16px;">
             <i class="bi bi-printer"></i> Print
         </button>
-        <a href="/meetings/{{ meeting.id }}#notes-section" class="btn-primary-nexus" style="font-size:13px; padding:8px 16px;">
+        <a href="/meetings/{{ meeting.id }}" class="btn-outline-nexus" style="font-size:13px; padding:8px 16px;">
             <i class="bi bi-pencil-fill"></i> Edit Notes
         </a>
     </div>
@@ -79,7 +103,35 @@
 <!-- Notes body -->
 <div class="card-nexus p-5 fade-up" style="max-width:860px; margin:0 auto;">
     {% if meeting.transcript %}
+
+        {% if meeting.formatted_transcript %}
+        <!-- Tab switcher -->
+        <div style="display:flex; gap:4px; margin-bottom:20px; background:var(--surface); border-radius:10px; padding:4px; width:fit-content;" class="no-print">
+            <button class="tab-btn active" id="tabFormatted" onclick="showTab('formatted')">
+                <i class="bi bi-stars"></i> Formatted
+            </button>
+            <button class="tab-btn" id="tabRaw" onclick="showTab('raw')">
+                <i class="bi bi-file-text"></i> Raw
+            </button>
+        </div>
+
+        <div id="viewFormatted" class="notes-markdown">
+            {{ meeting.formatted_transcript | markdown }}
+        </div>
+        <div id="viewRaw" style="display:none;" class="notes-body">{{ meeting.transcript }}</div>
+
+        {% else %}
+        <!-- No formatted version yet -->
+        <div style="display:flex; align-items:center; gap:10px; background:var(--primary-soft);
+            border:1px solid var(--border-2); border-radius:10px; padding:12px 16px; margin-bottom:20px;" class="no-print">
+            <i class="bi bi-stars" style="color:var(--primary); font-size:16px;"></i>
+            <span style="font-size:13px; color:var(--primary-dark);">
+                Click <strong>Format with AI</strong> above to get a clean, structured version of these notes.
+            </span>
+        </div>
         <div class="notes-body">{{ meeting.transcript }}</div>
+        {% endif %}
+
     {% else %}
         <div class="notes-empty">
             <i class="bi bi-journal"></i>
@@ -90,5 +142,16 @@
         </div>
     {% endif %}
 </div>
+
+{% block extra_js %}
+<script>
+function showTab(tab) {
+    document.getElementById('viewFormatted').style.display = tab === 'formatted' ? 'block' : 'none';
+    document.getElementById('viewRaw').style.display       = tab === 'raw'       ? 'block' : 'none';
+    document.getElementById('tabFormatted').classList.toggle('active', tab === 'formatted');
+    document.getElementById('tabRaw').classList.toggle('active', tab === 'raw');
+}
+</script>
+{% endblock %}
 
 {% endblock %}

@@ -20,7 +20,8 @@ class Meeting(db.Model):
     source = db.Column(db.String(50), default="manual")  # manual, email, ics_import
     email_uid = db.Column(db.String(255), default="")  # track which email this came from
     calendar_uid = db.Column(db.String(255), default="")  # ICS UID for dedup
-    transcript   = db.Column(db.Text, default="")         # AI note taker / live transcript
+    transcript           = db.Column(db.Text, default="")  # AI note taker / live transcript
+    formatted_transcript = db.Column(db.Text, default="")  # AI-formatted version
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

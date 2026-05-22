@@ -23,6 +23,13 @@ def create_app():
 
     app.register_blueprint(main_bp)
 
+    # Register markdown filter for templates
+    import markdown as md
+    from markupsafe import Markup
+    @app.template_filter('markdown')
+    def markdown_filter(text):
+        return Markup(md.markdown(text or '', extensions=['extra', 'nl2br']))
+
     with app.app_context():
         db.create_all()
         _migrate_calendar_feeds(db)
@@ -37,7 +44,8 @@ def _migrate_calendar_feeds(db):
         migrations = [
             ("calendar_feeds", "owner_name",  "VARCHAR(255)"),
             ("calendar_feeds", "owner_email", "VARCHAR(255)"),
-            ("meetings",       "transcript",  "TEXT"),
+            ("meetings",       "transcript",           "TEXT"),
+            ("meetings",       "formatted_transcript", "TEXT"),
         ]
         for table, col, coltype in migrations:
             try:

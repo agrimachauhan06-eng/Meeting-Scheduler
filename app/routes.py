@@ -339,8 +339,38 @@ def view_meeting_notes(meeting_id):
 def save_meeting_notes(meeting_id):
     meeting = Meeting.query.get_or_404(meeting_id)
     meeting.transcript = request.form.get("transcript", "").strip()
+    meeting.formatted_transcript = ""  # clear formatted version when raw notes are updated
     db.session.commit()
     flash("Notes saved.", "success")
+    return redirect(url_for("main.view_meeting_notes", meeting_id=meeting_id))
+
+
+@main_bp.route("/meetings/<int:meeting_id>/notes/format", methods=["POST"])
+def format_meeting_notes(meeting_id):
+    meeting = Meeting.query.get_or_404(meeting_id)
+    if not meeting.transcript or not meeting.transcript.strip():
+        flash("No notes to format.", "warning")
+        return redirect(url_for("main.view_meeting_notes", meeting_id=meeting_id))
+    try:
+        import google.generativeai as genai
+        import os
+        genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        prompt = (
+            "You are a meeting notes formatter. Format the following raw speech-to-text transcript "
+            "into clean, well-structured meeting notes. Use clear section headers for each topic, "
+            "bullet points for action items prefixed with '[ ]', and bullet points for discussion points. "
+            "Remove filler words and speech artifacts. Fix grammar and punctuation. "
+            "Keep ALL information — do not summarise or drop any details. "
+            "Return only the formatted notes in plain markdown. No explanations.\n\n"
+            "Raw transcript:\n" + meeting.transcript
+        )
+        response = model.generate_content(prompt)
+        meeting.formatted_transcript = response.text.strip()
+        db.session.commit()
+        flash("Notes formatted successfully.", "success")
+    except Exception as e:
+        flash(f"Formatting failed: {e}", "error")
     return redirect(url_for("main.view_meeting_notes", meeting_id=meeting_id))
 
 
