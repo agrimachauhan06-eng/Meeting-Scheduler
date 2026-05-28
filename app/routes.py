@@ -352,10 +352,8 @@ def format_meeting_notes(meeting_id):
         flash("No notes to format.", "warning")
         return redirect(url_for("main.view_meeting_notes", meeting_id=meeting_id))
     try:
-        import google.generativeai as genai
-        import os
-        genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        import requests, os
+        api_key = os.getenv("GEMINI_API_KEY")
         prompt = (
             "You are a meeting notes formatter. Format the following raw speech-to-text transcript "
             "into clean, well-structured meeting notes. Use clear section headers for each topic, "
@@ -365,8 +363,13 @@ def format_meeting_notes(meeting_id):
             "Return only the formatted notes in plain markdown. No explanations.\n\n"
             "Raw transcript:\n" + meeting.transcript
         )
-        response = model.generate_content(prompt)
-        meeting.formatted_transcript = response.text.strip()
+        resp = requests.post(
+            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}",
+            json={"contents": [{"parts": [{"text": prompt}]}]},
+            timeout=30
+        )
+        resp.raise_for_status()
+        meeting.formatted_transcript = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
         db.session.commit()
         flash("Notes formatted successfully.", "success")
     except Exception as e:
