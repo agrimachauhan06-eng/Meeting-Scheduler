@@ -820,9 +820,22 @@ def _sync_feed(feed):
         if not ical_attendees and feed.owner_email:
             ical_attendees = [{"name": feed.owner_name or feed.name, "email": feed.owner_email}]
 
-        # Deduplicate by calendar_uid — backfill attendees if missing on existing meeting
-        if uid:
-            existing = Meeting.query.filter_by(calendar_uid=uid).first()
+        # Recurring events share the same UID but have a RECURRENCE-ID per instance.
+        # Build a unique dedup key that distinguishes each occurrence.
+        recurrence_id_prop = component.get("RECURRENCE-ID")
+        if recurrence_id_prop:
+            rid_dt = recurrence_id_prop.dt
+            if isinstance(rid_dt, datetime):
+                rid_str = rid_dt.strftime("%Y%m%dT%H%M%S")
+            else:
+                rid_str = rid_dt.strftime("%Y%m%d")
+            dedup_uid = f"{uid}_{rid_str}" if uid else ""
+        else:
+            dedup_uid = uid
+
+        # Deduplicate by dedup_uid — backfill attendees if missing on existing meeting
+        if dedup_uid:
+            existing = Meeting.query.filter_by(calendar_uid=dedup_uid).first()
             if existing:
                 if not existing.attendees and ical_attendees:
                     from app.models import Attendee as AttendeeModel
@@ -843,7 +856,7 @@ def _sync_feed(feed):
             location=location,
             organizer=organizer_str,
             source="ical",
-            calendar_uid=uid,
+            calendar_uid=dedup_uid,
             attendees=ical_attendees,
         )
         imported += 1
