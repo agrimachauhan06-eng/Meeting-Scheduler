@@ -150,6 +150,9 @@ document.addEventListener('DOMContentLoaded', function() {
         selectable: true,
         nowIndicator: true,
         eventTimeFormat: { hour: '2-digit', minute: '2-digit', meridiem: 'short' },
+        dateClick: function(info) {
+            calendar.changeView('timeGridDay', info.dateStr);
+        },
         eventClick: function(info) {
             info.jsEvent.preventDefault();
             if (info.event.url) window.location.href = info.event.url;
