@@ -52,6 +52,16 @@ class ReminderEngine:
             replace_existing=True,
         )
 
+        calendar_sync_interval = int(os.getenv("CALENDAR_SYNC_INTERVAL", "1800"))  # default 30 min
+        self.scheduler.add_job(
+            self._sync_calendars,
+            "interval",
+            seconds=calendar_sync_interval,
+            id="calendar_sync",
+            replace_existing=True,
+            next_run_time=__import__("datetime").datetime.now(),  # run immediately on startup too
+        )
+
         self.scheduler.start()
         logger.info("Reminder engine started.")
 
@@ -210,3 +220,20 @@ class ReminderEngine:
                 m.status = "completed"
 
             db.session.commit()
+
+    def _sync_calendars(self):
+        with self.app.app_context():
+            try:
+                from app.models import CalendarFeed
+                from app.routes import _sync_feed
+                feeds = CalendarFeed.query.filter_by(is_active=True).all()
+                total = 0
+                for feed in feeds:
+                    try:
+                        total += _sync_feed(feed)
+                    except Exception as e:
+                        logger.error(f"Auto-sync failed for feed '{feed.name}': {e}")
+                if total:
+                    logger.info(f"Auto-synced {total} new event(s) from {len(feeds)} calendar feed(s).")
+            except Exception as e:
+                logger.error(f"Calendar auto-sync job failed: {e}")
