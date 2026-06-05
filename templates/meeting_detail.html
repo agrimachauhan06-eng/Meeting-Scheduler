@@ -104,6 +104,49 @@
     }
 
     /* Note taker */
+    /* Action Items Kanban */
+    .kanban-wrap {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+    }
+    @media (max-width: 640px) { .kanban-wrap { grid-template-columns: 1fr; } }
+    .kanban-col-head {
+        font-size: 12px; font-weight: 700; letter-spacing: 0.5px;
+        text-transform: uppercase; padding: 6px 12px; border-radius: 8px;
+        margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+    }
+    .kanban-col-todo .kanban-col-head  { background: var(--amber-soft); color: #92400E; }
+    .kanban-col-done .kanban-col-head  { background: var(--emerald-soft); color: #065F46; }
+    .kanban-card {
+        background: var(--surface); border: 1.5px solid var(--border);
+        border-radius: 10px; padding: 10px 12px;
+        display: flex; align-items: flex-start; gap: 10px;
+        margin-bottom: 8px; transition: box-shadow 0.15s;
+    }
+    .kanban-card:hover { box-shadow: var(--shadow); }
+    .kanban-card.done-card { opacity: 0.65; }
+    .kanban-check {
+        width: 18px; height: 18px; border-radius: 5px; flex-shrink: 0;
+        border: 2px solid var(--border-2); cursor: pointer; margin-top: 2px;
+        display: flex; align-items: center; justify-content: center;
+        transition: all 0.15s;
+    }
+    .kanban-check.checked { background: var(--emerald); border-color: var(--emerald); }
+    .kanban-title { font-size: 13.5px; font-weight: 500; color: var(--text); flex: 1; line-height: 1.4; }
+    .kanban-title.done-text { text-decoration: line-through; color: var(--text-muted); }
+    .kanban-meta { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+    .kanban-del {
+        background: none; border: none; cursor: pointer; color: var(--text-light);
+        font-size: 12px; padding: 2px 4px; border-radius: 4px; flex-shrink: 0;
+        transition: color 0.15s;
+    }
+    .kanban-del:hover { color: var(--rose); }
+    .kanban-empty {
+        text-align: center; padding: 20px 12px; color: var(--text-light);
+        font-size: 12.5px; border: 1.5px dashed var(--border); border-radius: 10px;
+    }
+    .priority-dot {
+        width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: 5px;
+    }
     .live-dot {
         display: inline-block; width: 8px; height: 8px;
         background: var(--rose); border-radius: 50%;
@@ -388,6 +431,117 @@
             </button>
         </div>
     </form>
+</div>
+
+<!-- Action Items Kanban -->
+<div class="card-nexus p-4 mt-4 fade-up" id="action-items">
+    <div class="section-head" style="justify-content:space-between; flex-wrap:wrap; gap:8px;">
+        <span><i class="bi bi-kanban-fill"></i> Action Items
+            <span style="font-size:11px; font-weight:600; background:var(--primary-soft); color:var(--primary);
+                border:1px solid var(--border-2); border-radius:20px; padding:2px 8px; margin-left:6px;">
+                {{ action_items | selectattr('is_completed','equalto',False) | list | length }} open
+            </span>
+        </span>
+    </div>
+
+    <!-- Add action item form -->
+    <form method="POST" action="/meetings/{{ meeting.id }}/tasks/add"
+          style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px; align-items:flex-end;">
+        <div style="flex:1; min-width:180px;">
+            <label class="detail-label" style="margin-bottom:5px; display:block;">Task</label>
+            <input type="text" name="title" class="form-control-nexus" required
+                   placeholder="e.g. Send follow-up email"
+                   style="height:38px; font-size:13px;">
+        </div>
+        <div style="min-width:130px;">
+            <label class="detail-label" style="margin-bottom:5px; display:block;">Assigned to</label>
+            <input type="text" name="assigned_to" class="form-control-nexus"
+                   placeholder="Name (optional)" style="height:38px; font-size:13px;">
+        </div>
+        <div style="min-width:110px;">
+            <label class="detail-label" style="margin-bottom:5px; display:block;">Priority</label>
+            <select name="priority" class="form-control-nexus" style="height:38px; font-size:13px;">
+                <option value="normal">Normal</option>
+                <option value="high">High</option>
+                <option value="critical">Critical</option>
+                <option value="low">Low</option>
+            </select>
+        </div>
+        <button type="submit" class="btn-primary-nexus" style="height:38px; font-size:13px; padding:0 16px; flex-shrink:0;">
+            <i class="bi bi-plus-lg"></i> Add
+        </button>
+    </form>
+
+    {% if action_items %}
+    <div class="kanban-wrap">
+        <!-- To Do column -->
+        <div class="kanban-col kanban-col-todo">
+            <div class="kanban-col-head"><i class="bi bi-circle"></i> To Do</div>
+            {% set todo_items = action_items | selectattr('is_completed','equalto',False) | list %}
+            {% if todo_items %}
+                {% for task in todo_items %}
+                <div class="kanban-card">
+                    <div class="priority-dot" style="background:
+                        {% if task.priority == 'critical' %}var(--rose)
+                        {% elif task.priority == 'high' %}var(--amber)
+                        {% elif task.priority == 'low' %}var(--text-light)
+                        {% else %}var(--primary){% endif %};"></div>
+                    <div style="flex:1; min-width:0;">
+                        <div class="kanban-title">{{ task.title }}</div>
+                        {% if task.assigned_to %}
+                        <div class="kanban-meta"><i class="bi bi-person"></i> {{ task.assigned_to }}</div>
+                        {% endif %}
+                    </div>
+                    <form method="POST" action="/meetings/{{ meeting.id }}/tasks/{{ task.id }}/toggle" style="margin:0;">
+                        <button type="submit" class="kanban-check" title="Mark complete"></button>
+                    </form>
+                    <form method="POST" action="/meetings/{{ meeting.id }}/tasks/{{ task.id }}/delete"
+                          style="margin:0;" onsubmit="return confirm('Delete this action item?')">
+                        <button type="submit" class="kanban-del"><i class="bi bi-x"></i></button>
+                    </form>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="kanban-empty"><i class="bi bi-check2-all"></i><br>All done!</div>
+            {% endif %}
+        </div>
+
+        <!-- Done column -->
+        <div class="kanban-col kanban-col-done">
+            <div class="kanban-col-head"><i class="bi bi-check-circle-fill"></i> Done</div>
+            {% set done_items = action_items | selectattr('is_completed','equalto',True) | list %}
+            {% if done_items %}
+                {% for task in done_items %}
+                <div class="kanban-card done-card">
+                    <div class="priority-dot" style="background:var(--text-light);"></div>
+                    <div style="flex:1; min-width:0;">
+                        <div class="kanban-title done-text">{{ task.title }}</div>
+                        {% if task.assigned_to %}
+                        <div class="kanban-meta"><i class="bi bi-person"></i> {{ task.assigned_to }}</div>
+                        {% endif %}
+                    </div>
+                    <form method="POST" action="/meetings/{{ meeting.id }}/tasks/{{ task.id }}/toggle" style="margin:0;">
+                        <button type="submit" class="kanban-check checked" title="Mark incomplete">
+                            <i class="bi bi-check-lg" style="color:white; font-size:10px;"></i>
+                        </button>
+                    </form>
+                    <form method="POST" action="/meetings/{{ meeting.id }}/tasks/{{ task.id }}/delete"
+                          style="margin:0;" onsubmit="return confirm('Delete this action item?')">
+                        <button type="submit" class="kanban-del"><i class="bi bi-x"></i></button>
+                    </form>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="kanban-empty">No completed items yet</div>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div style="text-align:center; padding:30px 20px; color:var(--text-muted); font-size:13.5px;">
+        <i class="bi bi-kanban" style="font-size:32px; opacity:0.25; display:block; margin-bottom:10px;"></i>
+        No action items yet. Add one above.
+    </div>
+    {% endif %}
 </div>
 
 {% endblock %}

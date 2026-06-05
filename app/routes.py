@@ -326,7 +326,43 @@ def meeting_detail(meeting_id):
     if not meeting:
         flash("Meeting not found.", "error")
         return redirect(url_for("main.meetings_list"))
-    return render_template("meeting_detail.html", meeting=meeting)
+    from app.models import Task
+    action_items = Task.query.filter_by(meeting_id=meeting_id).order_by(Task.created_at.asc()).all()
+    return render_template("meeting_detail.html", meeting=meeting, action_items=action_items)
+
+
+@main_bp.route("/meetings/<int:meeting_id>/tasks/add", methods=["POST"])
+def add_meeting_task(meeting_id):
+    from app.models import Task
+    title = request.form.get("title", "").strip()
+    if not title:
+        flash("Task title is required.", "error")
+        return redirect(url_for("main.meeting_detail", meeting_id=meeting_id) + "#action-items")
+    assigned_to = request.form.get("assigned_to", "").strip()
+    priority = request.form.get("priority", "normal")
+    task = Task(title=title, assigned_to=assigned_to, priority=priority, meeting_id=meeting_id)
+    db.session.add(task)
+    db.session.commit()
+    return redirect(url_for("main.meeting_detail", meeting_id=meeting_id) + "#action-items")
+
+
+@main_bp.route("/meetings/<int:meeting_id>/tasks/<int:task_id>/toggle", methods=["POST"])
+def toggle_meeting_task(meeting_id, task_id):
+    from app.models import Task
+    task = Task.query.filter_by(id=task_id, meeting_id=meeting_id).first_or_404()
+    task.is_completed = not task.is_completed
+    task.completed_at = datetime.utcnow() if task.is_completed else None
+    db.session.commit()
+    return redirect(url_for("main.meeting_detail", meeting_id=meeting_id) + "#action-items")
+
+
+@main_bp.route("/meetings/<int:meeting_id>/tasks/<int:task_id>/delete", methods=["POST"])
+def delete_meeting_task(meeting_id, task_id):
+    from app.models import Task
+    task = Task.query.filter_by(id=task_id, meeting_id=meeting_id).first_or_404()
+    db.session.delete(task)
+    db.session.commit()
+    return redirect(url_for("main.meeting_detail", meeting_id=meeting_id) + "#action-items")
 
 
 @main_bp.route("/meetings/<int:meeting_id>/notes", methods=["GET"])

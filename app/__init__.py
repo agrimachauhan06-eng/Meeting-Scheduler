@@ -62,6 +62,7 @@ def _migrate_calendar_feeds(db):
             ("calendar_feeds", "owner_email", "VARCHAR(255)"),
             ("meetings",       "transcript",           "TEXT"),
             ("meetings",       "formatted_transcript", "TEXT"),
+            ("tasks",          "meeting_id",           "INTEGER"),
         ]
         for table, col, coltype in migrations:
             try:

@@ -186,6 +186,7 @@ class Task(db.Model):
     is_completed   = db.Column(db.Boolean, default=False)
     completed_at   = db.Column(db.DateTime, nullable=True)
     notes          = db.Column(db.Text, default="")
+    meeting_id     = db.Column(db.Integer, db.ForeignKey("meetings.id"), nullable=True)
     created_at     = db.Column(db.DateTime, default=datetime.utcnow)
 
 
