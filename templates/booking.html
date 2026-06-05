@@ -337,7 +337,7 @@
         <div class="organizer-sub">Pick a time that works for you. A confirmation will be sent to your email.</div>
         <div class="hero-tags">
             <span class="hero-tag"><i class="bi bi-calendar3"></i> Mon – Fri</span>
-            <span class="hero-tag"><i class="bi bi-clock"></i> 8:00 AM – 8:00 PM</span>
+            <span class="hero-tag"><i class="bi bi-clock"></i> Times in your timezone</span>
             <span class="hero-tag"><i class="bi bi-envelope"></i> Email confirmation</span>
         </div>
     </div>
@@ -366,12 +366,17 @@
 
             <hr class="divider">
 
-            <!-- Step 2: Date -->
+            <!-- Step 2: Timezone + Date -->
             <div class="book-section" id="step2">
                 <div class="section-title">
                     <span class="section-num" id="num2">2</span>
-                    Pick a date
+                    Your timezone &amp; date
                 </div>
+                <div style="margin-bottom:12px;">
+                    <label class="form-label"><i class="bi bi-globe2" style="margin-right:4px;"></i>Timezone</label>
+                    <select id="tzSelect" class="form-control" style="max-width:340px;" onchange="onTzChange(this.value)"></select>
+                </div>
+                <label class="form-label"><i class="bi bi-calendar3" style="margin-right:4px;"></i>Date</label>
                 <input type="date" id="dateInput" class="form-control" style="max-width:220px;"
                        oninput="onDateChange(this.value)" min="">
                 <div style="margin-top:8px; font-size:12px; color:var(--text-muted);">
@@ -463,15 +468,48 @@
     let selectedDuration = 30;
     let selectedDate = '';
     let selectedUtc = '';
+    let selectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
     // Set min date to today
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('dateInput').setAttribute('min', today);
 
-    // Show timezone label
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const tzShort = new Date().toLocaleTimeString('en', {timeZoneName:'short'}).split(' ').pop();
-    document.getElementById('tzLabel').textContent = tzShort;
+    // Populate timezone selector
+    (function() {
+        const select = document.getElementById('tzSelect');
+        const allTz = Intl.supportedValuesOf ? Intl.supportedValuesOf('timeZone') : [];
+        // Fallback curated list if browser doesn't support supportedValuesOf
+        const fallback = [
+            'Pacific/Honolulu','America/Anchorage','America/Los_Angeles','America/Denver',
+            'America/Chicago','America/New_York','America/Sao_Paulo','Atlantic/Azores',
+            'Europe/London','Europe/Paris','Europe/Berlin','Europe/Moscow',
+            'Asia/Dubai','Asia/Kolkata','Asia/Dhaka','Asia/Bangkok','Asia/Shanghai',
+            'Asia/Tokyo','Asia/Seoul','Australia/Sydney','Pacific/Auckland'
+        ];
+        const tzList = allTz.length ? allTz : fallback;
+        tzList.forEach(tz => {
+            const opt = document.createElement('option');
+            opt.value = tz;
+            // Show offset for readability
+            const offset = new Date().toLocaleTimeString('en', {timeZone: tz, timeZoneName:'short'}).split(' ').pop();
+            opt.textContent = `${tz.replace(/_/g,' ')} (${offset})`;
+            if (tz === selectedTz) opt.selected = true;
+            select.appendChild(opt);
+        });
+    })();
+
+    // Show timezone label badge
+    function updateTzLabel() {
+        const tzShort = new Date().toLocaleTimeString('en', {timeZone: selectedTz, timeZoneName:'short'}).split(' ').pop();
+        document.getElementById('tzLabel').textContent = tzShort;
+    }
+    updateTzLabel();
+
+    function onTzChange(tz) {
+        selectedTz = tz;
+        updateTzLabel();
+        if (selectedDate) fetchSlots(selectedDate, selectedDuration);
+    }
 
     function selectDuration(mins, el) {
         document.querySelectorAll('.pill').forEach(p => p.classList.remove('selected'));
@@ -520,9 +558,9 @@
                 }
                 let html = '<div class="slot-grid">';
                 data.slots.forEach(slot => {
-                    // Convert UTC to local time
+                    // Convert UTC to selected timezone
                     const utcDate = new Date(slot.utc + 'Z');
-                    const localLabel = utcDate.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                    const localLabel = utcDate.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', timeZone: selectedTz});
                     html += `<div class="slot-pill" onclick="selectSlot('${slot.utc}', '${localLabel}', this)">${localLabel}</div>`;
                 });
                 html += '</div>';
@@ -543,8 +581,9 @@
         // Show summary
         const d = new Date(selectedDate + 'T00:00:00');
         const dateLabel = d.toLocaleDateString([], {weekday:'long', month:'long', day:'numeric'});
+        const tzShort = new Date().toLocaleTimeString('en', {timeZone: selectedTz, timeZoneName:'short'}).split(' ').pop();
         document.getElementById('summaryText').textContent =
-            dateLabel + ' at ' + label + ' (' + selectedDuration + ' min)';
+            dateLabel + ' at ' + label + ' ' + tzShort + ' (' + selectedDuration + ' min)';
         document.getElementById('selectedSummary').classList.add('show');
 
         // Enable step 4 and submit
