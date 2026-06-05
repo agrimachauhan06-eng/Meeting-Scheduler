@@ -24,6 +24,7 @@ def require_api_key(f):
 @main_bp.route("/")
 def dashboard():
     MeetingManager.auto_complete_past_meetings()
+    _background_sync_calendars()
     stats = MeetingManager.get_meeting_stats()
     upcoming = MeetingManager.get_upcoming_meetings(hours=48)
     todays = MeetingManager.get_todays_meetings()
@@ -31,6 +32,22 @@ def dashboard():
         "dashboard.html", stats=stats, upcoming=upcoming, todays=todays,
         now=datetime.utcnow()
     )
+
+
+def _background_sync_calendars():
+    """Sync active calendar feeds if last sync was >15 minutes ago. Runs inline on dashboard load."""
+    try:
+        from app.models import CalendarFeed
+        feeds = CalendarFeed.query.filter_by(is_active=True).all()
+        cutoff = datetime.utcnow() - timedelta(minutes=15)
+        for feed in feeds:
+            if feed.last_synced is None or feed.last_synced < cutoff:
+                try:
+                    _sync_feed(feed)
+                except Exception:
+                    pass
+    except Exception:
+        pass
 
 
 @main_bp.route("/calendar")
@@ -835,11 +852,12 @@ def _sync_feed(feed):
         if isinstance(end_dt, date_type) and not isinstance(end_dt, datetime):
             end_dt = datetime(end_dt.year, end_dt.month, end_dt.day, 10, 0, 0)
 
-        # Strip timezone info (store as UTC-naive)
+        # Convert to UTC then strip timezone (store as UTC-naive)
+        from datetime import timezone as _tz
         if hasattr(start_dt, "tzinfo") and start_dt.tzinfo:
-            start_dt = start_dt.replace(tzinfo=None)
+            start_dt = start_dt.astimezone(_tz.utc).replace(tzinfo=None)
         if hasattr(end_dt, "tzinfo") and end_dt.tzinfo:
-            end_dt = end_dt.replace(tzinfo=None)
+            end_dt = end_dt.astimezone(_tz.utc).replace(tzinfo=None)
 
         description = str(component.get("DESCRIPTION", "")).strip()
         location    = str(component.get("LOCATION", "")).strip()
