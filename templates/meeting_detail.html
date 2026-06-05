@@ -176,10 +176,16 @@
     <a href="/meetings" class="btn-outline-nexus" style="font-size:13px; padding:8px 16px;">
         <i class="bi bi-arrow-left"></i> All Meetings
     </a>
-    <div style="display:flex; gap:8px;">
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <a href="/meetings/{{ meeting.id }}/edit" class="btn-primary-nexus" style="padding:8px 16px; font-size:13px;">
             <i class="bi bi-pencil-fill"></i> Edit
         </a>
+        <form method="POST" action="/meetings/{{ meeting.id }}/send-followup" style="margin:0;">
+            <button type="submit" class="btn-outline-nexus" style="padding:8px 16px; font-size:13px;"
+                    title="Email attendees a summary with action items and notes">
+                <i class="bi bi-send-fill"></i> Send Follow-up
+            </button>
+        </form>
         {% if meeting.status == 'scheduled' %}
         <form method="POST" action="/meetings/{{ meeting.id }}/cancel" style="margin:0;">
             <button type="submit" class="btn-warning-nexus" style="padding:8px 16px; font-size:13px;">

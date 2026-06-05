@@ -413,6 +413,25 @@ def format_meeting_notes(meeting_id):
     return redirect(url_for("main.view_meeting_notes", meeting_id=meeting_id))
 
 
+@main_bp.route("/meetings/<int:meeting_id>/send-followup", methods=["POST"])
+def send_meeting_followup(meeting_id):
+    meeting = MeetingManager.get_meeting(meeting_id)
+    if not meeting:
+        flash("Meeting not found.", "error")
+        return redirect(url_for("main.meetings_list"))
+    from app.models import Task
+    action_items = Task.query.filter_by(meeting_id=meeting_id).order_by(Task.created_at.asc()).all()
+    try:
+        sent = InviteService.send_followup(meeting, action_items=action_items)
+        if sent:
+            flash(f"Follow-up email sent to {sent} recipient(s).", "success")
+        else:
+            flash("No recipients found. Add attendees or configure a notify email account.", "warning")
+    except Exception as e:
+        flash(f"Failed to send follow-up: {e}", "error")
+    return redirect(url_for("main.meeting_detail", meeting_id=meeting_id))
+
+
 @main_bp.route("/meetings/<int:meeting_id>/cancel", methods=["POST"])
 def cancel_meeting(meeting_id):
     MeetingManager.cancel_meeting(meeting_id)

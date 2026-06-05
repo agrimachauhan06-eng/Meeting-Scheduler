@@ -166,6 +166,123 @@ class InviteService:
         return sent
 
     @staticmethod
+    def send_followup(meeting, action_items=None):
+        """Send a post-meeting follow-up email to all attendees (or notify accounts if no attendees)."""
+        smtp_user, smtp_pass, smtp_host, smtp_port = InviteService._get_smtp_creds()
+        if not smtp_user or not smtp_pass:
+            logger.warning("SMTP not configured. Skipping follow-up sending.")
+            return 0
+
+        # Determine recipients
+        recipients = [(a.name or a.email, a.email) for a in meeting.attendees] if meeting.attendees else []
+        if not recipients:
+            notify_accounts = EmailAccount.query.filter_by(is_active=True, notify_enabled=True).all()
+            recipients = [(acc.display_name or acc.email, acc.email) for acc in notify_accounts]
+        if not recipients:
+            return 0
+
+        action_items = action_items or []
+        open_items   = [t for t in action_items if not t.is_completed]
+        done_items   = [t for t in action_items if t.is_completed]
+
+        duration_mins = int((meeting.end_time - meeting.start_time).total_seconds() / 60)
+        date_str      = meeting.start_time.strftime("%A, %B %d, %Y")
+        time_str      = f"{meeting.start_time.strftime('%I:%M %p')} – {meeting.end_time.strftime('%I:%M %p')}"
+
+        def _item_rows(items):
+            if not items:
+                return "<tr><td colspan='2' style='padding:6px 0; color:#9CA3AF; font-size:13px;'>None</td></tr>"
+            rows = ""
+            priority_colors = {"critical": "#F43F5E", "high": "#F59E0B", "normal": "#6366F1", "low": "#9CA3AF"}
+            for t in items:
+                color = priority_colors.get(t.priority, "#6366F1")
+                assignee = f" &mdash; <span style='color:#6B7280'>{t.assigned_to}</span>" if t.assigned_to else ""
+                rows += f"""
+                <tr>
+                  <td style='padding:6px 0; font-size:13.5px; color:#111827;'>
+                    {t.title}{assignee}
+                  </td>
+                  <td style='padding:6px 0; text-align:right;'>
+                    <span style='background:{color}22; color:{color}; font-weight:700;
+                      border-radius:20px; padding:2px 8px; font-size:11px; border:1px solid {color}44;'>
+                      {t.priority.upper()}
+                    </span>
+                  </td>
+                </tr>"""
+            return rows
+
+        notes_section = ""
+        if meeting.formatted_transcript or meeting.transcript:
+            text = (meeting.formatted_transcript or meeting.transcript or "")[:800]
+            if len(meeting.formatted_transcript or meeting.transcript or "") > 800:
+                text += "…"
+            notes_section = f"""
+            <div style='margin-top:24px; padding:16px 20px; background:#F9FAFB;
+                border-radius:10px; border-left:3px solid #6366F1;'>
+              <div style='font-size:11px; font-weight:700; color:#6366F1; letter-spacing:0.8px;
+                  text-transform:uppercase; margin-bottom:8px;'>Meeting Notes (excerpt)</div>
+              <div style='font-size:13px; color:#374151; white-space:pre-wrap; line-height:1.7;'>{text}</div>
+            </div>"""
+
+        html = f"""
+        <div style="font-family:'Inter',Arial,sans-serif; max-width:560px; margin:0 auto;
+            background:#fff; border-radius:16px; overflow:hidden; border:1px solid #E5E7EB;">
+          <div style="background:linear-gradient(135deg,#6366F1,#7C3AED); padding:28px 32px;">
+            <div style="font-size:12px; font-weight:700; color:rgba(255,255,255,0.7);
+                letter-spacing:1px; text-transform:uppercase; margin-bottom:6px;">Nexus &middot; Meeting Follow-up</div>
+            <div style="font-size:22px; font-weight:800; color:#fff; line-height:1.3;">{meeting.title}</div>
+            <div style="font-size:13px; color:rgba(255,255,255,0.8); margin-top:8px;">
+              {date_str} &nbsp;&bull;&nbsp; {time_str} &nbsp;&bull;&nbsp; {duration_mins} min
+            </div>
+          </div>
+          <div style="padding:28px 32px;">
+
+            {"<div style='margin-bottom:20px; padding:12px 16px; background:#EEF2FF; border-radius:10px; font-size:13px; color:#3730A3;'><strong>Location:</strong> " + meeting.location + "</div>" if meeting.location else ""}
+
+            <!-- Open Action Items -->
+            <div style="margin-bottom:20px;">
+              <div style="font-size:12px; font-weight:700; color:#374151; letter-spacing:0.6px;
+                  text-transform:uppercase; margin-bottom:10px; padding-bottom:6px;
+                  border-bottom:2px solid #EEF2FF;">
+                Open Action Items ({len(open_items)})
+              </div>
+              <table style="width:100%; border-collapse:collapse;">
+                {_item_rows(open_items)}
+              </table>
+            </div>
+
+            <!-- Completed Items -->
+            {'<div style="margin-bottom:20px;"><div style="font-size:12px; font-weight:700; color:#374151; letter-spacing:0.6px; text-transform:uppercase; margin-bottom:10px; padding-bottom:6px; border-bottom:2px solid #ECFDF5;">Completed (' + str(len(done_items)) + ')</div><table style="width:100%; border-collapse:collapse;">' + _item_rows(done_items) + '</table></div>' if done_items else ''}
+
+            {notes_section}
+
+            <div style="margin-top:28px; padding:14px 18px; background:#F9FAFB;
+                border-radius:10px; font-size:12px; color:#9CA3AF; text-align:center;">
+              Sent by <strong style="color:#6366F1;">Nexus</strong> Meeting Scheduler
+            </div>
+          </div>
+        </div>
+        """
+
+        sent = 0
+        for name, email in recipients:
+            try:
+                msg = MIMEMultipart("alternative")
+                msg["Subject"] = f"Follow-up: {meeting.title}"
+                msg["From"]    = smtp_user
+                msg["To"]      = email
+                msg.attach(MIMEText(html, "html"))
+                with smtplib.SMTP(smtp_host, smtp_port) as server:
+                    server.starttls()
+                    server.login(smtp_user, smtp_pass)
+                    server.sendmail(smtp_user, email, msg.as_string())
+                sent += 1
+                logger.info(f"Sent follow-up for '{meeting.title}' to {email}")
+            except Exception as e:
+                logger.error(f"Failed to send follow-up to {email}: {e}")
+        return sent
+
+    @staticmethod
     def send_task_notification(task):
         """Send an email notification for a newly created task/reminder."""
         if not task.assigned_email:
